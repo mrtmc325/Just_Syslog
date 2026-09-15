@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<!-- Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syslog Collector</title>
+<style>
+  /* System fonts only — no external assets (air-gap safe). */
+  :root {
+    --bg:#f5f6f8; --panel:#fff; --ink:#1c2330; --muted:#6b7280;
+    --line:#e3e6ea; --head:#1f2937; --accent:#2563eb;
+    --s-emerg:#b91c1c; --s-err:#dc2626; --s-warn:#d97706;
+    --s-notice:#2563eb; --s-info:#4b5563; --s-debug:#9ca3af;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
+  header { background:var(--head); color:#fff; padding:10px 16px;
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; font-weight:600; letter-spacing:.2px; }
+  header .stat { font-size:12px; color:#cbd5e1; }
+  header .stat b { color:#fff; font-weight:600; }
+  .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  .controls label { font-size:12px; color:var(--muted); }
+  select,input,button { font:inherit; padding:5px 9px; border:1px solid var(--line);
+    border-radius:6px; background:#fff; color:var(--ink); }
+  input[type=text]{ min-width:200px; }
+  button { cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.warn { background:#fff; color:#b45309; border-color:#f0c48a; }
+  .wrap { padding:0 16px 16px; }
+  table { width:100%; border-collapse:collapse; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  thead th { text-align:left; font-size:11px; text-transform:uppercase;
+    letter-spacing:.4px; color:var(--muted); background:#fafbfc;
+    padding:8px 10px; border-bottom:1px solid var(--line); position:sticky; top:0; }
+  tbody td { padding:6px 10px; border-bottom:1px solid var(--line);
+    vertical-align:top; white-space:nowrap; }
+  tbody td.msg { white-space:normal; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12.5px; max-width:640px; overflow:hidden; text-overflow:ellipsis; }
+  tbody tr:hover { background:#f0f6ff; cursor:pointer; }
+  .sev { display:inline-block; min-width:74px; padding:1px 7px; border-radius:10px;
+    font-size:11px; font-weight:600; color:#fff; text-align:center; }
+  .muted { color:var(--muted); }
+  .empty { padding:40px; text-align:center; color:var(--muted); }
+  /* Detail modal */
+  .modal { position:fixed; inset:0; background:rgba(15,23,42,.5);
+    display:none; align-items:flex-start; justify-content:center; padding:40px 16px; }
+  .modal.open { display:flex; }
+  .card { background:#fff; border-radius:10px; max-width:760px; width:100%;
+    box-shadow:0 10px 40px rgba(0,0,0,.25); max-height:82vh; overflow:auto; }
+  .card h2 { margin:0; padding:14px 18px; border-bottom:1px solid var(--line); font-size:15px; }
+  .card .body { padding:6px 18px 18px; }
+  .kv { display:grid; grid-template-columns:130px 1fr; gap:2px 14px; padding:10px 0; }
+  .kv dt { color:var(--muted); font-size:12px; padding:4px 0; }
+  .kv dd { margin:0; padding:4px 0; word-break:break-word; }
+  .kv dd.mono, pre.raw { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; }
+  pre.raw { background:#0f172a; color:#e2e8f0; padding:12px; border-radius:8px;
+    white-space:pre-wrap; word-break:break-word; }
+  .close { float:right; cursor:pointer; border:none; background:none; font-size:20px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Syslog Collector</h1>
+  <span class="stat">Messages (file): <b id="st-msgs">–</b></span>
+  <span class="stat">Files: <b id="st-files">–</b></span>
+  <span class="stat">Total size: <b id="st-size">–</b></span>
+  <span class="stat">Current: <b id="st-cur">–</b></span>
+  <span class="stat" style="margin-left:auto">Log dir: <b id="st-dir">–</b></span>
+</header>
+
+<div class="controls">
+  <label>File
+    <select id="file"></select>
+  </label>
+  <label>Show
+    <select id="limit">
+      <option>200</option><option selected>500</option>
+      <option>1000</option><option>5000</option>
+    </select>
+  </label>
+  <label>Severity
+    <select id="sev">
+      <option value="">all</option>
+      <option value="0">Emergency</option><option value="1">Alert</option>
+      <option value="2">Critical</option><option value="3">Error</option>
+      <option value="4">Warning</option><option value="5">Notice</option>
+      <option value="6">Informational</option><option value="7">Debug</option>
+    </select>
+  </label>
+  <input id="filter" type="text" placeholder="Filter host / app / text…">
+  <label><input id="auto" type="checkbox"> auto-refresh</label>
+  <button id="refresh">Refresh</button>
+  <button id="cleanup" class="warn" title="Delete old / oversized log files now">Run cleanup</button>
+</div>
+
+<div class="wrap">
+  <table>
+    <thead><tr>
+      <th>Received</th><th>Source</th><th>Host</th><th>Severity</th>
+      <th>Facility</th><th>App</th><th>Message</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="empty" class="empty">No messages yet. The first datagram creates today’s log file.</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="card">
+    <h2><button class="close" id="close">&times;</button>Message detail</h2>
+    <div class="body">
+      <dl class="kv" id="detail"></dl>
+      <div class="muted" style="font-size:12px;margin:6px 0 4px">Raw</div>
+      <pre class="raw" id="raw"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+const SEV_CLASS = ["s-emerg","s-emerg","s-err","s-err","s-warn","s-notice","s-info","s-debug"];
+const SEV_COLOR = ["--s-emerg","--s-emerg","--s-err","--s-err","--s-warn","--s-notice","--s-info","--s-debug"];
+let CURRENT = []; // last fetched messages
+
+const $ = id => document.getElementById(id);
+function fmtBytes(n){ if(n<1024)return n+" B"; const u=["KB","MB","GB","TB"]; let i=-1;
+  do{ n/=1024; i++; }while(n>=1024 && i<u.length-1); return n.toFixed(1)+" "+u[i]; }
+
+async function loadFiles(){
+  const files = await fetch("/api/files").then(r=>r.json()).catch(()=>[]);
+  const sel = $("file"); const keep = sel.value;
+  sel.textContent = "";
+  files.forEach(f=>{ const o=document.createElement("option"); o.value=f; o.textContent=f; sel.appendChild(o); });
+  if (files.includes(keep)) sel.value = keep;
+}
+
+async function loadStats(){
+  const [s,c] = await Promise.all([
+    fetch("/api/stats").then(r=>r.json()).catch(()=>({})),
+    fetch("/api/config").then(r=>r.json()).catch(()=>({})),
+  ]);
+  $("st-msgs").textContent = s.total_messages ?? "0";
+  $("st-files").textContent = s.file_count ?? "0";
+  $("st-size").textContent = fmtBytes(s.total_bytes ?? 0);
+  $("st-cur").textContent = s.current_file || "—";
+  $("st-dir").textContent = c.log_dir || "—";
+}
+
+async function loadMessages(){
+  const file = $("file").value;
+  const limit = $("limit").value;
+  const q = "/api/messages?limit="+encodeURIComponent(limit)+(file?"&file="+encodeURIComponent(file):"");
+  CURRENT = await fetch(q).then(r=>r.json()).catch(()=>[]);
+  render();
+}
+
+function render(){
+  const term = $("filter").value.toLowerCase();
+  const sev = $("sev").value;
+  const rows = $("rows"); rows.textContent = "";
+  let shown = 0;
+  // newest first
+  for (let i=CURRENT.length-1; i>=0; i--){
+    const m = CURRENT[i];
+    if (sev !== "" && String(m.severity) !== sev) continue;
+    if (term){
+      const hay = (m.hostname+" "+m.app+" "+m.message+" "+m.source_ip).toLowerCase();
+      if (!hay.includes(term)) continue;
+    }
+    rows.appendChild(rowEl(m, i));
+    shown++;
+  }
+  $("empty").style.display = shown ? "none" : "block";
+}
+
+function td(text, cls){ const d=document.createElement("td"); if(cls)d.className=cls; d.textContent=text??""; return d; }
+
+function rowEl(m, idx){
+  const tr = document.createElement("tr");
+  tr.appendChild(td(m.received));
+  tr.appendChild(td(m.source_ip));
+  tr.appendChild(td(m.hostname || "—"));
+  const sd = document.createElement("td");
+  const badge = document.createElement("span");
+  badge.className = "sev";
+  badge.textContent = m.severity_name || m.severity;
+  badge.style.background = "var("+(SEV_COLOR[m.severity]||"--s-info")+")";
+  sd.appendChild(badge); tr.appendChild(sd);
+  tr.appendChild(td(m.facility_name));
+  tr.appendChild(td(m.app || "—"));
+  tr.appendChild(td(m.message, "msg"));
+  tr.addEventListener("click", ()=>openDetail(m));
+  return tr;
+}
+
+function openDetail(m){
+  const dl = $("detail"); dl.textContent = "";
+  const fields = [
+    ["Received", m.received],["Source IP", m.source_ip],["Timestamp", m.timestamp],
+    ["Host", m.hostname],["App / Tag", m.app],["Process ID", m.procid],
+    ["Message ID", m.msgid],["Facility", m.facility_name+" ("+m.facility+")"],
+    ["Severity", m.severity_name+" ("+m.severity+")"],["Message", m.message],
+  ];
+  for (const [k,v] of fields){
+    const dt=document.createElement("dt"); dt.textContent=k;
+    const dd=document.createElement("dd"); dd.textContent=(v===""||v==null)?"—":v;
+    if (k==="Message") dd.className="mono";
+    dl.appendChild(dt); dl.appendChild(dd);
+  }
+  $("raw").textContent = m.raw || "";
+  $("modal").classList.add("open");
+}
+
+async function refreshAll(){ await loadFiles(); await Promise.all([loadStats(), loadMessages()]); }
+
+// wiring
+$("refresh").addEventListener("click", refreshAll);
+$("file").addEventListener("change", ()=>{ loadMessages(); loadStats(); });
+$("limit").addEventListener("change", loadMessages);
+$("sev").addEventListener("change", render);
+$("filter").addEventListener("input", render);
+$("close").addEventListener("click", ()=>$("modal").classList.remove("open"));
+$("modal").addEventListener("click", e=>{ if(e.target===$("modal")) $("modal").classList.remove("open"); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("modal").classList.remove("open"); });
+$("cleanup").addEventListener("click", async ()=>{
+  if(!confirm("Delete log files older than the retention period, and trim oldest files if over the size cap?")) return;
+  const r = await fetch("/api/cleanup",{method:"POST"}).then(r=>r.json()).catch(()=>({}));
+  alert("Cleanup done.\nFiles deleted: "+(r.files_deleted??0)+"\nFreed: "+fmtBytes(r.bytes_freed??0));
+  refreshAll();
+});
+
+let timer=null;
+$("auto").addEventListener("change", e=>{
+  clearInterval(timer);
+  if(e.target.checked) timer=setInterval(()=>{ loadStats(); loadMessages(); }, 5000);
+});
+
+refreshAll();
+</script>
+</body>
+</html>
