@@ -39,6 +39,7 @@ struct Store {
     retention_days: u64,
     max_total_bytes: u64,
     file: Option<File>,
+    current_day: String,
     current_name: String,
     current_size: u64,
     messages_written: u64,
@@ -65,7 +66,9 @@ impl Store {
 
     fn ensure_open(&mut self) -> io::Result<()> {
         let want = daily_name(&now_rfc3339());
-        if self.file.is_some() && self.current_name == want {
+        // Guard on the day (not the filename) so the cached handle is reused;
+        // rotate() keeps current_day, so a mid-day rotation still short-circuits.
+        if self.file.is_some() && self.current_day == want {
             return Ok(());
         }
         fs::create_dir_all(&self.dir)?;
@@ -73,6 +76,7 @@ impl Store {
         let (name, path, size) = find_current(&self.dir, &want);
         let f = OpenOptions::new().create(true).append(true).open(&path)?;
         self.file = Some(f);
+        self.current_day = want;
         self.current_name = name;
         self.current_size = size;
         Ok(())
@@ -268,20 +272,13 @@ pub fn read_messages_json(dir: &Path, name: &str, limit: usize) -> io::Result<St
     }
     // ponytail: tail-scan, O(window). Add an index only if huge files need paging.
     let take = lines.len().min(limit);
-    let slice = &lines[lines.len() - take..];
-    let mut out = String::from("[");
-    for (i, l) in slice.iter().enumerate() {
-        let l = l.trim();
-        if l.is_empty() {
-            continue;
-        }
-        if i > 0 && out.len() > 1 {
-            out.push(',');
-        }
-        out.push_str(l);
-    }
-    out.push(']');
-    Ok(out)
+    let body = lines[lines.len() - take..]
+        .iter()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .collect::<Vec<_>>()
+        .join(",");
+    Ok(format!("[{body}]"))
 }
 
 /// Run the store on the current thread until the command channel closes.
@@ -300,26 +297,36 @@ pub fn run(
         retention_days,
         max_total_bytes: max_total_mb * 1024 * 1024,
         file: None,
+        current_day: String::new(),
         current_name: String::new(),
         current_size: 0,
         messages_written: 0,
     };
     let idle = Duration::from_secs(auto_cleanup_secs.max(30));
+    let mut last_cleanup = std::time::Instant::now();
     loop {
         match rx.recv_timeout(idle) {
             Ok(Cmd::Msg(m)) => {
                 if let Err(e) = store.append(&m) {
                     eprintln!("[store] write error: {e}");
                 }
+                // recv_timeout never fires under steady traffic, so also run
+                // retention on an elapsed check after appends.
+                if last_cleanup.elapsed() >= idle {
+                    store.cleanup();
+                    last_cleanup = std::time::Instant::now();
+                }
             }
             Ok(Cmd::Cleanup(reply)) => {
                 let _ = reply.send(store.cleanup());
+                last_cleanup = std::time::Instant::now();
             }
             Ok(Cmd::Stats(reply)) => {
                 let _ = reply.send(store.stats());
             }
             Err(RecvTimeoutError::Timeout) => {
-                store.cleanup(); // periodic automatic GC
+                store.cleanup(); // periodic automatic GC while idle
+                last_cleanup = std::time::Instant::now();
             }
             Err(RecvTimeoutError::Disconnected) => break,
         }
@@ -357,6 +364,7 @@ mod tests {
             retention_days: 30,
             max_total_bytes: 0,
             file: None,
+            current_day: String::new(),
             current_name: String::new(),
             current_size: 0,
             messages_written: 0,
