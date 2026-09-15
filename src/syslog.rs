@@ -144,7 +144,9 @@ impl Message {
 // leading timestamp doesn't match, so the caller can fall back to raw.
 fn parse_3164(m: &mut Message, s: &str) -> bool {
     let s = s.trim_start();
-    if s.len() < 16 || !is_rfc3164_time(&s[..15]) {
+    // is_char_boundary(15) guards the &s[..15] / s[15..] slices against a
+    // multibyte UTF-8 char straddling byte 15 (which would panic).
+    if s.len() < 16 || !s.is_char_boundary(15) || !is_rfc3164_time(&s[..15]) {
         return false;
     }
     m.timestamp = s[..15].to_string();
@@ -312,6 +314,17 @@ mod tests {
         let m = Message::parse(b"just some random text", "10.0.0.3", "T");
         assert_eq!(m.message, "just some random text");
         assert_eq!(m.raw, "just some random text");
+    }
+
+    #[test]
+    fn multibyte_at_boundary_does_not_panic() {
+        // "€" (3 bytes) straddles byte 15 of the post-PRI body; must not panic.
+        let m = Message::parse(
+            "<13>xxxxxxxxxxxxxx\u{20ac}xxxx more text".as_bytes(),
+            "10.0.0.7", "T",
+        );
+        assert!(m.raw.contains('\u{20ac}'));
+        assert!(!m.message.is_empty()); // parsed as free-text, not crashed
     }
 
     #[test]

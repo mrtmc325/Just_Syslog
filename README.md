@@ -100,6 +100,8 @@ powershell -ExecutionPolicy Bypass -File installer\uninstall.ps1
 ## Security notes
 
 - The viewer binds **127.0.0.1 only**; only UDP/514 is exposed to the network.
+  It also validates the `Host` header (only `localhost`/`127.0.0.1` accepted) to
+  block DNS-rebinding reads from a malicious web page.
 - Log content is untrusted: the viewer renders every field as text (no HTML
   injection), and the message API validates filenames against a strict
   allow-list (no path traversal).

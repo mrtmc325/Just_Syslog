@@ -179,6 +179,8 @@ pub fn is_log_name(name: &str) -> bool {
 | UDP flood / message burst | Memory growth, drops | Med | Bounded 10k channel, `try_send` drops newest under flood; O(1) memory |
 | Disk fills from log volume | Service/host degraded | Med | Size rotation + age retention + total-size cap + manual cleanup |
 | Malicious content in a log field (XSS) | Operator browser | Low | `textContent`-only rendering + strict CSP |
+| DNS-rebinding read of the loopback API | Log-data exposure | Low | `Host`-header validation — only `localhost`/`127.0.0.1[:ui_port]` accepted |
+| Crafted UTF-8 datagram | Receiver-thread panic | Low | `is_char_boundary` guard in RFC3164 slice; parser is total |
 | Path traversal via `file=` | Arbitrary file read | Low | Strict filename allow-list; bounded tail read |
 | Per-write `flush()` slow at high rate | Throughput ceiling | Low | Acceptable for target scale; batch-flush is the noted upgrade path |
 | UDP is lossy / unauthenticated | Missed or spoofed logs | Med | Inherent to syslog/UDP; document; TCP/TLS is a future option |
@@ -220,4 +222,5 @@ pub fn is_log_name(name: &str) -> bool {
 
 ---
 Updated 2026-09-15: initial plan authored alongside the implementation.
+Updated 2026-09-15: ran /code-review (high) + /security-review. Fixed RFC3164 UTF-8 boundary panic, auto-cleanup starvation under continuous load, and a dead `ensure_open` handle-reuse guard; added `Host`-header validation as a DNS-rebinding defense. All in the same commit as this doc.
 Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.

@@ -69,8 +69,9 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
     if n == 0 {
         return Ok(());
     }
-    // Drain headers (bounded).
+    // Drain headers (bounded), capturing Host for anti-rebinding validation.
     let mut header_bytes = request_line.len();
+    let mut host = String::new();
     loop {
         let mut line = String::new();
         n = reader.read_line(&mut line)?;
@@ -78,6 +79,17 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
         if n == 0 || line == "\r\n" || line == "\n" || header_bytes > MAX_HEADER {
             break;
         }
+        if let Some((k, v)) = line.split_once(':') {
+            if k.eq_ignore_ascii_case("host") {
+                host = v.trim().to_string();
+            }
+        }
+    }
+
+    // Reject a non-local Host header (DNS-rebinding defense). An absent Host
+    // (e.g. a local curl/HTTP-1.0 client) is allowed; a browser always sends one.
+    if !host.is_empty() && !host_is_local(&host, cfg.ui_port) {
+        return respond(&mut stream, 403, "text/plain", b"forbidden host");
     }
 
     let mut parts = request_line.split_whitespace();
@@ -160,6 +172,7 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
 fn respond(stream: &mut TcpStream, code: u16, ctype: &str, body: &[u8]) -> std::io::Result<()> {
     let reason = match code {
         200 => "OK",
+        403 => "Forbidden",
         404 => "Not Found",
         405 => "Method Not Allowed",
         _ => "OK",
@@ -178,6 +191,15 @@ fn respond(stream: &mut TcpStream, code: u16, ctype: &str, body: &[u8]) -> std::
     stream.write_all(head.as_bytes())?;
     stream.write_all(body)?;
     stream.flush()
+}
+
+/// True if `host` (a Host header value) names this loopback server. Bare host
+/// or host:ui_port for 127.0.0.1 / localhost / ::1 only. Blocks DNS rebinding.
+fn host_is_local(host: &str, port: u16) -> bool {
+    let h = host
+        .strip_suffix(&format!(":{port}"))
+        .unwrap_or(host);
+    matches!(h, "127.0.0.1" | "localhost" | "[::1]" | "::1")
 }
 
 fn query_get(query: &str, key: &str) -> Option<String> {
@@ -241,5 +263,15 @@ mod tests {
         assert_eq!(query_get("file=a", "missing"), None);
         assert_eq!(url_decode("syslog-20260915%2D3.jsonl"), "syslog-20260915-3.jsonl");
         assert_eq!(url_decode("a+b"), "a b");
+    }
+
+    #[test]
+    fn host_validation() {
+        assert!(host_is_local("127.0.0.1:8514", 8514));
+        assert!(host_is_local("localhost:8514", 8514));
+        assert!(host_is_local("127.0.0.1", 8514));
+        assert!(!host_is_local("attacker.com:8514", 8514)); // DNS rebinding
+        assert!(!host_is_local("127.0.0.1:9999", 8514));     // wrong port
+        assert!(!host_is_local("evil.localhost", 8514));
     }
 }
