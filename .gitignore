@@ -1,0 +1,28 @@
+# Build output
+/target
+/dist
+
+# Collected logs / local data
+*.jsonl
+/syslog-collector-data
+
+# Secrets (never commit) — baseline discipline
+.env*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+id_ed25519*
+credentials
+secrets.*
+.aws/
+.azure/
+.gcp/
+*.sqlite
+*.db
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
