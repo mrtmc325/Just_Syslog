@@ -1,0 +1,23 @@
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+[package]
+name = "syslog-collector"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.71"
+authors = ["Tristan Conner <tristan@conner.house>"]
+description = "Lean Windows syslog (UDP/514) collector with a local web viewer."
+publish = false
+
+[[bin]]
+name = "syslogd"
+path = "src/main.rs"
+
+# Only external dependency. Windows-only; the portable core builds with std alone
+# (so parser/HTTP/storage logic is testable on any OS).
+[target.'cfg(windows)'.dependencies]
+windows-service = "=0.8.1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
