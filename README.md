@@ -1,161 +1,111 @@
 # Syslog Collector
 
-A lean, cross-platform syslog server (Windows, macOS, Linux). Listens on
-**UDP/514**, parses RFC 3164 / RFC 5424 (and anything else, best-effort), writes
-newline-delimited JSON log files, and serves a clean local web viewer on
-`http://127.0.0.1:8514/`. Runs as an auto-start service (Windows service /
-launchd / systemd). Single native binary, no runtime to install.
+**Syslog on the fly.** When the network or a system is going sideways, stand this
+up on any host, point the failing gear at it (UDP/514), and read the logs
+immediately in a clean local viewer. Fast to deploy, fast to read, easy to tear
+down — a disposable syslog sink for the moment you actually need the logs.
 
-- **One dependency:** `windows-service` (Windows only). Everything else is the
-  Rust standard library. Non-Windows builds have zero external dependencies.
-- **Storage:** one JSON-lines file per day (`syslog-YYYYMMDD.jsonl`), rotated by
-  size, created only after the first message arrives.
-- **Cleanup ("garbage collection"):** automatic retention by age + total-size
-  cap, plus a **Run cleanup** button in the UI.
+- Listens on **UDP/514**; parses RFC 3164 / RFC 5424 (and anything else,
+  best-effort); writes newline-delimited JSON, one file per day.
+- **Single native binary**, no runtime. Auto-start service (Windows service /
+  launchd / systemd).
+- **Local web viewer** at `http://127.0.0.1:8514/` (loopback only) — click any
+  row for full message detail.
+- **Tray / menu bar controller** (Windows + macOS): start/stop, edit config,
+  clear logs, open the viewer.
+- Automatic log retention by age and total size, plus a **Run cleanup** button.
+- One dependency (`windows-service`, Windows only); standard library elsewhere.
 
-## Requirements
+## Install — Windows
 
-- **To run (end users):** nothing. The installer places a native `.exe`.
-- **To build (developer, once):** [Rust](https://rustup.rs) + the MSVC C++ build
-  tools (Visual Studio "Desktop development with C++"). For the MSI, the
-  [WiX v5 CLI](https://wixtoolset.org) (`dotnet tool install --global wix`).
-
-## Build (on Windows)
-
-```powershell
-# x64 only
-.\build.ps1
-# x64 + x86 fallback
-.\build.ps1 -X86
-```
-
-Binaries land in `dist\x64\syslogd.exe` (and `dist\x86\syslogd.exe`).
-
-## Install
-
-**Option A — MSI (single file, recommended).** Build it once with WiX v5
-(`dotnet tool install --global wix`), then distribute the one `.msi`:
+Build the MSI once (needs [WiX v5](https://wixtoolset.org)
+`dotnet tool install --global wix`, plus Rust + the MSVC build tools), then ship
+the single `.msi`:
 
 ```powershell
 .\installer\build-msi.ps1
 ```
-
-That produces `SyslogCollector-1.0.0-x64.msi`. Install it (double-click, or):
-
 ```powershell
-msiexec /i SyslogCollector-1.0.0-x64.msi LOGDIR="D:\SyslogLogs"
+msiexec /i SyslogCollector-1.0.0-x64.msi LOGDIR="D:\Logs"
 ```
 
-The MSI natively installs the service, opens the firewall, writes config, and
-adds an Add/Remove Programs entry; `msiexec /x` reverses all of it. `LOGDIR` is
-optional (defaults to `C:\SyslogCollector\logs`); add `/qn` for a silent install.
-One MSI is x64; build a separate x86 MSI only if you need the 32-bit fallback.
+Installs the service (auto-start), opens **UDP/514** in the firewall, drops a
+**tray icon** with **Start Menu / Desktop shortcuts**, and registers in Add/Remove
+Programs. `LOGDIR` is optional (default `C:\SyslogCollector\logs`); add `/qn` for
+silent; `msiexec /x` reverses everything.
 
-**Option B — PowerShell (no build tooling).** Elevated PowerShell:
+No build tooling? `installer\install.ps1 -LogDir "D:\Logs"` (elevated) does the
+same without WiX.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File installer\install.ps1 -LogDir "D:\SyslogLogs"
-```
+**Tray controller** — right-click the icon to Start/Stop the service, edit
+**Configuration**, **Clear Logs**, or **Open Viewer**; **Quit** stops the service
+and exits. Status shows in the tooltip; service actions prompt for UAC.
 
-Both:
-
-1. Copies `syslogd.exe` to `C:\Program Files\SyslogCollector\`.
-2. Registers service **SyslogCollector** (start type *Automatic* — starts at boot).
-3. Opens inbound **UDP/514** in Windows Firewall (`profile=any`).
-4. Writes config to `%ProgramData%\SyslogCollector\config.txt`.
-5. Installs a **system tray controller** (starts at login) — the Windows
-   equivalent of the macOS menu bar app.
-
-### System tray (Windows)
-
-A notification-area icon (WinForms, no dependencies) mirrors the macOS menu bar
-app. Right-click it to **Start / Stop Service**, edit **Configuration** (fields
-+ Save & Restart), **Clear Logs**, **Open Viewer**; **Quit** stops the service
-and exits. Status (Running/Stopped + message count) shows in the tooltip and
-menu. Service/config/log actions prompt for elevation (UAC), like the macOS
-admin prompts. To run it by hand: `wscript "C:\Program Files\SyslogCollector\tray\SyslogTray.vbs"`.
-
-## Install (macOS / Linux)
-
-Same collector, supervised by launchd / systemd. Build the native package:
+## Install — macOS / Linux
 
 ```bash
-./packaging/macos/build-pkg.sh          # macOS  -> SyslogCollector-1.0.0-macos.pkg
-./packaging/linux/build-linux-packages.sh   # Linux -> .deb + .rpm (needs nfpm)
+./packaging/macos/build-pkg.sh          # macOS -> .pkg (launchd + menu bar app)
+./packaging/linux/build-in-docker.sh    # Linux -> .deb + .rpm (from any Docker host)
 ```
-
 ```bash
-sudo installer -pkg SyslogCollector-1.0.0-macos.pkg -target /   # macOS
-sudo apt install ./syslog-collector_1.0.0_amd64.deb             # Debian/Ubuntu
-sudo dnf install ./syslog-collector-1.0.0.x86_64.rpm            # RHEL/Fedora
+sudo installer -pkg SyslogCollector-1.0.0-macos.pkg -target /
+sudo apt install ./syslog-collector_1.0.0_amd64.deb            # Debian/Ubuntu
+sudo dnf install ./syslog-collector-1.0.0-1.x86_64.rpm         # RHEL/Fedora
 ```
 
-Config at `/etc/syslog-collector/config.txt`, logs at `/var/log/syslog-collector`,
-command installed as `syslog-collector`. On **macOS** the pkg also installs a menu
-bar app (**Syslog Collector.app**) to start/stop the service, edit config, and
-clear logs. Full details, uninstall, and firewall notes:
-[`packaging/README.md`](packaging/README.md).
+macOS gets the same controller as the Windows tray, in the **menu bar**. Config at
+`/etc/syslog-collector/config.txt`, logs at `/var/log/syslog-collector`. Details
+and uninstall: [`packaging/README.md`](packaging/README.md).
 
 ## Use
 
-- **Viewer:** <http://127.0.0.1:8514/> (loopback only — not exposed to the network).
-- **Point devices at** this host's IP, UDP port 514.
-- **Manage the service:** `services.msc` → *Syslog Collector*, or
-  `sc stop SyslogCollector` / `sc start SyslogCollector`.
-
-### Test it quickly
-
-Foreground run on non-privileged ports (works on any OS, no admin):
-
-```powershell
-.\dist\x64\syslogd.exe run --udp-port 5514 --ui-port 8514 --log-dir .\testlogs
-```
-
-Send a message (PowerShell):
-
-```powershell
-$u = New-Object Net.Sockets.UdpClient
-$b = [Text.Encoding]::ASCII.GetBytes("<34>Oct 11 22:14:15 host su: test message")
-$u.Send($b, $b.Length, "127.0.0.1", 5514) | Out-Null
-```
-
-Then open the viewer and watch it appear.
+1. **Point devices** at this host's IP, UDP **514** (open it on any firewall in
+   between — the installer opens the local one).
+2. **Open the viewer** — tray → *Open Viewer*, or <http://127.0.0.1:8514/>. The
+   first message creates today's log file.
 
 ## Configuration
 
-`%ProgramData%\SyslogCollector\config.txt` (edit, then restart the service):
+`%ProgramData%\SyslogCollector\config.txt` (Windows) or
+`/etc/syslog-collector/config.txt`. Edit from the tray / menu bar, or by hand and
+restart the service.
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `log_dir` | chosen at install | Folder for log files |
+| `log_dir` | set at install | Folder for log files |
 | `udp_port` | `514` | Syslog listen port |
 | `ui_port` | `8514` | Local viewer port (loopback) |
 | `max_file_mb` | `100` | Rotate the active file past this size |
-| `retention_days` | `30` | Delete files older than this (`0` = never) |
-| `max_total_mb` | `2048` | Trim oldest files once the folder exceeds this (`0` = no cap) |
+| `retention_days` | `30` | Delete files older than this (`0` = keep) |
+| `max_total_mb` | `2048` | Trim oldest files past this total (`0` = no cap) |
 
 ## Uninstall
 
+Windows: **Add/Remove Programs**, or `installer\uninstall.ps1` (elevated).
+macOS / Linux: see [`packaging/README.md`](packaging/README.md). Logs are left in place.
+
+## Build from source
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File installer\uninstall.ps1
+.\build.ps1 -X86        # Windows: x64 (+ x86); binaries in dist\
+```
+```bash
+cargo build --release   # macOS / Linux -> target/release/syslogd
 ```
 
-Or use **Add/Remove Programs** — `install.ps1` (like the MSI) registers a
-*Syslog Collector* entry there, and its Uninstall button self-elevates.
-Log files are left in place.
+Try it without installing (any OS, non-privileged ports):
 
-## Security notes
+```bash
+syslogd run --udp-port 5514 --ui-port 8514 --log-dir ./logs
+```
 
-- The viewer binds **127.0.0.1 only**; only UDP/514 is exposed to the network.
-  It also validates the `Host` header (only `localhost`/`127.0.0.1` accepted) to
-  block DNS-rebinding reads from a malicious web page.
-- Log content is untrusted: the viewer renders every field as text (no HTML
-  injection), and the message API validates filenames against a strict
-  allow-list (no path traversal).
-- Runs as *LocalSystem*. To run under a lower-privilege account, change the
-  service logon in `services.msc` (the account needs write access to `log_dir`).
-- No PHI/PII/CHD assumptions are baked in — this stores whatever devices send, in
-  clear-text files. Point `log_dir` at an encrypted volume if collected logs are
-  sensitive, and keep it off regulated-data hosts unless in scope and approved.
+## Notes
 
-Copyright (c) 2026 Tristan Conner <tristan@conner.house> — licensed under the [MIT License](LICENSE).
+- The viewer binds **127.0.0.1 only** (and validates `Host`, so a web page can't
+  DNS-rebind to it); only UDP/514 faces the network. Log fields render as text
+  (no HTML injection); the file API is allow-listed (no path traversal).
+- Logs are **clear-text** files holding whatever devices send. Point `log_dir` at
+  an encrypted volume for sensitive data, and keep it off regulated-data hosts
+  unless in scope and approved.
+
+Copyright (c) 2026 Tristan Conner <tristan@conner.house> — [MIT License](LICENSE).

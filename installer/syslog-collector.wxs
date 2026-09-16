@@ -35,6 +35,11 @@
     <StandardDirectory Id="CommonAppDataFolder">
       <Directory Id="DATAFOLDER" Name="SyslogCollector" />
     </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- Shortcut icon (Icon table). -->
+    <Icon Id="SyslogAppIcon" SourceFile="tray\syslog.ico" />
 
     <!-- The program + the service + the firewall rule, one component. -->
     <ComponentGroup Id="ProgramFiles" Directory="INSTALLFOLDER">
@@ -97,6 +102,18 @@
                      Name="SyslogCollectorTray"
                      Type="string"
                      Value="wscript.exe &quot;[INSTALLFOLDER]tray\SyslogTray.vbs&quot;" />
+
+      <!-- Start Menu + Desktop shortcuts to the tray controller. -->
+      <Shortcut Id="StartMenuTray" Directory="ProgramMenuFolder"
+                Name="Syslog Collector" Description="Open the Syslog Collector tray controller"
+                Target="[System64Folder]wscript.exe"
+                Arguments="&quot;[#SyslogTrayVbs]&quot;"
+                WorkingDirectory="TRAYFOLDER" Icon="SyslogAppIcon" />
+      <Shortcut Id="DesktopTray" Directory="DesktopFolder"
+                Name="Syslog Collector" Description="Open the Syslog Collector tray controller"
+                Target="[System64Folder]wscript.exe"
+                Arguments="&quot;[#SyslogTrayVbs]&quot;"
+                WorkingDirectory="TRAYFOLDER" Icon="SyslogAppIcon" />
     </Component>
 
     <Feature Id="Main" Title="Syslog Collector" Level="1">
