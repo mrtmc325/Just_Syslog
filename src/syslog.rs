@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Syslog message parsing (RFC 3164 + RFC 5424 + lenient fallback) and JSON
 // serialization. All fields are best-effort; `raw` always holds the original

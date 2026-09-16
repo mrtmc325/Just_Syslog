@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Syslog Collector — a lean Windows syslog (UDP/514) receiver with a local web
 // viewer, packaged as a Windows service. `run` works on any OS for testing.

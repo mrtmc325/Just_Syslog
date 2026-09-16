@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Build a single-file x64 .msi. Requires: Rust + MSVC build tools (to compile
 # syslogd.exe) and the WiX v5 CLI (`dotnet tool install --global wix`).

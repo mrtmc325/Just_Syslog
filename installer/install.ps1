@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Zero-extra-tooling installer. Copies syslogd.exe into Program Files, registers
 # it as an auto-start Windows service with a firewall rule, and adds an

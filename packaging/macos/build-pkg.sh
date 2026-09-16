@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Build the macOS installer (.pkg) with pkgbuild (ships with macOS - no extra
 # tooling). Host arch by default; pass -universal for a fat arm64+x86_64 binary

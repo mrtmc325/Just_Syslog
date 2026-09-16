@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Minimal HTTP/1.1 server for the local viewer. Loopback-only, single user, so
 // a small std-only handler beats pulling in a web framework. GET for reads,

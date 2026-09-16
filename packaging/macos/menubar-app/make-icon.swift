@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Renders the app icon (1024x1024 PNG) — a white broadcast glyph on a dark
 // slate rounded square, matching the menu bar symbol. AppKit only.
