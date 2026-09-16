@@ -1,9 +1,10 @@
 # Syslog Collector
 
-A lean Windows syslog server. Listens on **UDP/514**, parses RFC 3164 / RFC 5424
-(and anything else, best-effort), writes newline-delimited JSON log files, and
-serves a clean local web viewer on `http://127.0.0.1:8514/`. Runs as an
-auto-start Windows service. Single native `.exe`, no runtime to install.
+A lean, cross-platform syslog server (Windows, macOS, Linux). Listens on
+**UDP/514**, parses RFC 3164 / RFC 5424 (and anything else, best-effort), writes
+newline-delimited JSON log files, and serves a clean local web viewer on
+`http://127.0.0.1:8514/`. Runs as an auto-start service (Windows service /
+launchd / systemd). Single native binary, no runtime to install.
 
 - **One dependency:** `windows-service` (Windows only). Everything else is the
   Rust standard library. Non-Windows builds have zero external dependencies.
@@ -66,6 +67,25 @@ All three:
 2. Registers service **SyslogCollector** (start type *Automatic* — starts at boot).
 3. Opens inbound **UDP/514** in Windows Firewall (`profile=any`).
 4. Writes config to `%ProgramData%\SyslogCollector\config.txt`.
+
+## Install (macOS / Linux)
+
+Same collector, supervised by launchd / systemd. Build the native package:
+
+```bash
+./packaging/macos/build-pkg.sh          # macOS  -> SyslogCollector-1.0.0-macos.pkg
+./packaging/linux/build-linux-packages.sh   # Linux -> .deb + .rpm (needs nfpm)
+```
+
+```bash
+sudo installer -pkg SyslogCollector-1.0.0-macos.pkg -target /   # macOS
+sudo apt install ./syslog-collector_1.0.0_amd64.deb             # Debian/Ubuntu
+sudo dnf install ./syslog-collector-1.0.0.x86_64.rpm            # RHEL/Fedora
+```
+
+Config at `/etc/syslog-collector/config.txt`, logs at `/var/log/syslog-collector`,
+command installed as `syslog-collector`. Full details, uninstall, and firewall
+notes: [`packaging/README.md`](packaging/README.md).
 
 ## Use
 

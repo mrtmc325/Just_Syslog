@@ -218,10 +218,12 @@ pub fn is_log_name(name: &str) -> bool {
 - TCP syslog (RFC 6587) and TLS (RFC 5425); relay/forwarding to another SIEM.
 - Authentication on the viewer; remote (non-loopback) UI access.
 - Long-term archival, compression, or search indexing across files.
-- Non-Windows service packaging (the core is portable; only the service isn't).
+- ~~Non-Windows service packaging~~ — now in scope: macOS `.pkg` (launchd) and
+  Linux `.deb`/`.rpm` (systemd) added; see `packaging/`.
 
 ---
 Updated 2026-09-15: initial plan authored alongside the implementation.
 Updated 2026-09-15: ran /code-review (high) + /security-review. Fixed RFC3164 UTF-8 boundary panic, auto-cleanup starvation under continuous load, and a dead `ensure_open` handle-reuse guard; added `Host`-header validation as a DNS-rebinding defense. All in the same commit as this doc.
 Updated 2026-09-16: verified build+install on Windows. Added a single-file WiX v5 MSI (`installer/syslog-collector.wxs` + `build-msi.ps1`) that installs the service, firewall rule, and config declaratively (uninstall reverses all). MSI is now the recommended distributable; Inno `.exe` and `install.ps1` retained as alternatives.
+Updated 2026-09-16: ported to macOS/Linux (core was already portable; only the service layer was Windows-only). Init handled by launchd/systemd running `syslogd run`. Unix config/log paths (`/etc`, `/var/log`) in `config.rs`; packaging under `packaging/` — macOS `.pkg` (pkgbuild, verified building arm64 here) and Linux `.deb`/`.rpm` (nfpm, build-on-target). Firewall not auto-configured on Unix (documented). Zero external crates on Unix builds.
 Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.

@@ -2,6 +2,12 @@
 /target
 /dist
 
+# Package artifacts
+*.pkg
+*.deb
+*.rpm
+*.msi
+
 # Collected logs / local data
 *.jsonl
 /syslog-collector-data

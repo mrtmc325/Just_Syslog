@@ -1,0 +1,23 @@
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+[Unit]
+Description=Syslog Collector - UDP/514 receiver with local web viewer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/syslog-collector run
+Restart=on-failure
+RestartSec=5
+User=syslog-collector
+Group=syslog-collector
+# Bind the privileged syslog port (514) without full root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+# Light hardening (does not restrict a custom log_dir):
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
