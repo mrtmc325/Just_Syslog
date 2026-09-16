@@ -80,8 +80,10 @@ sudo dnf install ./syslog-collector-1.0.0.x86_64.rpm            # RHEL/Fedora
 ```
 
 Config at `/etc/syslog-collector/config.txt`, logs at `/var/log/syslog-collector`,
-command installed as `syslog-collector`. Full details, uninstall, and firewall
-notes: [`packaging/README.md`](packaging/README.md).
+command installed as `syslog-collector`. On **macOS** the pkg also installs a menu
+bar app (**Syslog Collector.app**) to start/stop the service, edit config, and
+clear logs. Full details, uninstall, and firewall notes:
+[`packaging/README.md`](packaging/README.md).
 
 ## Use
 
