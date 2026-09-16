@@ -105,5 +105,17 @@
       <ComponentRef Id="Tray" />
     </Feature>
 
+    <!-- Start the tray now (in the installing user's session) on a fresh
+         install, so the icon appears without waiting for the next login. -->
+    <CustomAction Id="LaunchTray"
+                  Directory="TRAYFOLDER"
+                  ExeCommand="wscript.exe &quot;[TRAYFOLDER]SyslogTray.vbs&quot;"
+                  Execute="immediate"
+                  Impersonate="yes"
+                  Return="asyncNoWait" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchTray" After="InstallFinalize" Condition="NOT Installed" />
+    </InstallExecuteSequence>
+
   </Package>
 </Wix>
