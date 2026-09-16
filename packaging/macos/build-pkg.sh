@@ -22,11 +22,16 @@ else
     BIN="$ROOT/target/release/syslogd"
 fi
 
+# Menu bar controller app (-> /Applications).
+APPDIR=$(mktemp -d)
+sh packaging/macos/menubar-app/build-app.sh "$APPDIR/Syslog Collector.app" >/dev/null
+
 STAGE=$(mktemp -d)
-mkdir -p "$STAGE/usr/local/bin" "$STAGE/Library/LaunchDaemons" "$STAGE/etc/syslog-collector"
+mkdir -p "$STAGE/usr/local/bin" "$STAGE/Library/LaunchDaemons" "$STAGE/etc/syslog-collector" "$STAGE/Applications"
 install -m 0755 "$BIN" "$STAGE/usr/local/bin/syslog-collector"
 install -m 0644 packaging/launchd/house.conner.syslog-collector.plist "$STAGE/Library/LaunchDaemons/"
 install -m 0644 packaging/config.sample.txt "$STAGE/etc/syslog-collector/config.txt"
+cp -R "$APPDIR/Syslog Collector.app" "$STAGE/Applications/"
 
 chmod +x packaging/macos/scripts/postinstall
 OUT="$ROOT/SyslogCollector-${VERSION}-macos.pkg"
@@ -38,7 +43,8 @@ pkgbuild \
     --install-location / \
     "$OUT"
 
-rm -rf "$STAGE"
+rm -rf "$STAGE" "$APPDIR"
 echo "Built: $OUT"
+echo "  Installs: launchd service + /Applications/Syslog Collector.app (menu bar control)"
 echo "Install:   sudo installer -pkg \"$OUT\" -target /"
 echo "Uninstall: see packaging/README.md"
