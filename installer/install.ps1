@@ -1,7 +1,8 @@
 # Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
 #
-# Zero-extra-tooling installer. Copies syslogd.exe into Program Files and
-# registers it as an auto-start Windows service with a firewall rule.
+# Zero-extra-tooling installer. Copies syslogd.exe into Program Files, registers
+# it as an auto-start Windows service with a firewall rule, and adds an
+# Add/Remove Programs (Programs and Features) entry.
 # Run from an elevated PowerShell:  powershell -ExecutionPolicy Bypass -File install.ps1
 [CmdletBinding()]
 param(
@@ -50,8 +51,39 @@ Write-Host "Registering service (log dir: $LogDir, UDP/$UdpPort, UI 127.0.0.1:$U
 & $destExe install --log-dir "$LogDir" --udp-port $UdpPort --ui-port $UiPort
 if ($LASTEXITCODE -ne 0) { throw "Service registration failed (exit $LASTEXITCODE)." }
 
+# --- Programs and Features (Add/Remove Programs) entry ---
+# Copy the uninstaller next to the exe so the entry can call it standalone.
+$srcUninstall = Join-Path $here "uninstall.ps1"
+if (Test-Path $srcUninstall) {
+    $destUninstall = Join-Path $dest "uninstall.ps1"
+    Copy-Item -Path $srcUninstall -Destination $destUninstall -Force
+    $psExe  = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    $regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SyslogCollector"
+    New-Item -Path $regKey -Force | Out-Null
+    $arp = [ordered]@{
+        DisplayName          = "Syslog Collector"
+        DisplayVersion       = "1.0.0"
+        Publisher            = "Tristan Conner"
+        InstallLocation      = $dest
+        DisplayIcon          = $destExe
+        UninstallString      = "`"$psExe`" -ExecutionPolicy Bypass -File `"$destUninstall`""
+        QuietUninstallString = "`"$psExe`" -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$destUninstall`""
+        EstimatedSize        = [int]((Get-Item $destExe).Length / 1024)  # KB
+        NoModify             = 1
+        NoRepair             = 1
+    }
+    foreach ($name in $arp.Keys) {
+        $type = if ($arp[$name] -is [int]) { "DWord" } else { "String" }
+        New-ItemProperty -Path $regKey -Name $name -Value $arp[$name] -PropertyType $type -Force | Out-Null
+    }
+    $arpNote = "listed in Programs and Features"
+} else {
+    $arpNote = "uninstall.ps1 not found next to install.ps1 - skipped Programs and Features entry"
+}
+
 Write-Host ""
 Write-Host "Installed. Service 'SyslogCollector' is set to start automatically at boot."
 Write-Host "  Viewer : http://127.0.0.1:$UiPort/"
 Write-Host "  Logs   : $LogDir  (first file appears after the first message)"
 Write-Host "  Manage : services.msc  ->  Syslog Collector"
+Write-Host "  Remove : $arpNote"
