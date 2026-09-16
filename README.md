@@ -95,7 +95,9 @@ Then open the viewer and watch it appear.
 powershell -ExecutionPolicy Bypass -File installer\uninstall.ps1
 ```
 
-(or Add/Remove Programs if installed via Inno Setup). Log files are left in place.
+Or use **Add/Remove Programs** — `install.ps1` (like the Inno and MSI installers)
+registers a *Syslog Collector* entry there, and its Uninstall button self-elevates.
+Log files are left in place.
 
 ## Security notes
 
