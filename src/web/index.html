@@ -233,12 +233,17 @@ $("cleanup").addEventListener("click", async ()=>{
 });
 
 let timer=null;
-$("auto").addEventListener("change", e=>{
-  clearInterval(timer);
-  if(e.target.checked) timer=setInterval(()=>{ loadStats(); loadMessages(); }, 5000);
-});
+function syncAutoRefresh(){
+  clearInterval(timer); timer=null;
+  if($("auto").checked){
+    loadStats(); loadMessages();            // fire now, don't wait for the first interval
+    timer=setInterval(()=>{ loadStats(); loadMessages(); }, 5000);
+  }
+}
+$("auto").addEventListener("change", syncAutoRefresh);
 
 refreshAll();
+syncAutoRefresh();   // honor a browser-restored checked state on reload (no "flap" needed)
 </script>
 </body>
 </html>
