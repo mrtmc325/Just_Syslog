@@ -28,7 +28,9 @@
     <Property Id="LOGDIR" Value="C:\SyslogCollector\logs" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLFOLDER" Name="SyslogCollector" />
+      <Directory Id="INSTALLFOLDER" Name="SyslogCollector">
+        <Directory Id="TRAYFOLDER" Name="tray" />
+      </Directory>
     </StandardDirectory>
     <StandardDirectory Id="CommonAppDataFolder">
       <Directory Id="DATAFOLDER" Name="SyslogCollector" />
@@ -84,9 +86,23 @@
       <RemoveFolder Id="RemoveDataFolder" On="uninstall" />
     </Component>
 
+    <!-- System tray controller (WinForms) + start-at-login. -->
+    <Component Id="Tray" Directory="TRAYFOLDER" Bitness="always64"
+               Guid="8B7A6C5D-4E3F-4A2B-9C1D-0E9F8A7B6C5D">
+      <File Id="SyslogTrayPs1" Source="tray\SyslogTray.ps1" KeyPath="yes" />
+      <File Id="SyslogTrayVbs" Source="tray\SyslogTray.vbs" />
+      <File Id="SyslogIco"     Source="tray\syslog.ico" />
+      <RegistryValue Root="HKLM"
+                     Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                     Name="SyslogCollectorTray"
+                     Type="string"
+                     Value="wscript.exe &quot;[INSTALLFOLDER]tray\SyslogTray.vbs&quot;" />
+    </Component>
+
     <Feature Id="Main" Title="Syslog Collector" Level="1">
       <ComponentGroupRef Id="ProgramFiles" />
       <ComponentRef Id="Config" />
+      <ComponentRef Id="Tray" />
     </Feature>
 
   </Package>

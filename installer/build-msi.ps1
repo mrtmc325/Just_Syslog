@@ -34,7 +34,8 @@ if ($LASTEXITCODE -ne 0) { throw "Could not add $fwExt - check network / NuGet a
 $wxs = Join-Path $root "installer\syslog-collector.wxs"
 $out = Join-Path $root "SyslogCollector-1.0.0-x64.msi"
 Write-Host "== Building MSI =="
-& wix build $wxs -arch x64 -ext $fwExt -d "ExeSource=$exe" -o $out
+# -b: bind path so the tray files (Source="tray\...") resolve from installer\.
+& wix build $wxs -arch x64 -ext $fwExt -b (Split-Path -Parent $wxs) -d "ExeSource=$exe" -o $out
 if ($LASTEXITCODE -ne 0) { throw "wix build failed (exit $LASTEXITCODE) - no MSI produced." }
 
 Write-Host ""
