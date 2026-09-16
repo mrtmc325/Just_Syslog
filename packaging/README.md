@@ -29,11 +29,28 @@ sudo installer -pkg SyslogCollector-1.0.0-macos.pkg -target /
 # uninstall:
 sudo launchctl bootout system /Library/LaunchDaemons/house.conner.syslog-collector.plist
 sudo rm /Library/LaunchDaemons/house.conner.syslog-collector.plist /usr/local/bin/syslog-collector
+sudo rm -rf "/Applications/Syslog Collector.app"
 # (logs under /var/log/syslog-collector are left in place)
 ```
 
 The daemon runs as **root** (needed to bind port 514), starts at boot
 (`RunAtLoad`), and restarts on crash (`KeepAlive`).
+
+### Menu bar app
+
+The pkg also installs **`/Applications/Syslog Collector.app`** — a menu bar
+controller (AppKit, no dependencies). Open it from Applications (add it to
+**System Settings → General → Login Items** to have it start automatically). Its
+menu bar icon shows service status (polled from the loopback API) and lets you:
+
+- **Configuration…** — edit `log_dir`, ports, and retention, then Save & Restart.
+- **Start / Stop Service** — controls the launchd daemon.
+- **Clear Logs…** — delete all `.jsonl` files and restart the collector.
+- **Open Viewer** — open `http://127.0.0.1:8514/`.
+
+Service control and config writes touch root-owned paths, so each prompts once
+for admin credentials (macOS caches them briefly). Status polling needs no
+privilege.
 
 ## Linux `.deb` + `.rpm`
 
