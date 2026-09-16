@@ -28,7 +28,10 @@ Install / uninstall:
 sudo installer -pkg SyslogCollector-1.0.0-macos.pkg -target /
 # uninstall:
 sudo launchctl bootout system /Library/LaunchDaemons/house.conner.syslog-collector.plist
-sudo rm /Library/LaunchDaemons/house.conner.syslog-collector.plist /usr/local/bin/syslog-collector
+launchctl bootout "gui/$(id -u)" /Library/LaunchAgents/house.conner.syslog-collector.menubar.plist 2>/dev/null || true
+sudo rm /Library/LaunchDaemons/house.conner.syslog-collector.plist \
+        /Library/LaunchAgents/house.conner.syslog-collector.menubar.plist \
+        /usr/local/bin/syslog-collector
 sudo rm -rf "/Applications/Syslog Collector.app"
 # (logs under /var/log/syslog-collector are left in place)
 ```
@@ -39,9 +42,10 @@ The daemon runs as **root** (needed to bind port 514), starts at boot
 ### Menu bar app
 
 The pkg also installs **`/Applications/Syslog Collector.app`** — a menu bar
-controller (AppKit, no dependencies). Open it from Applications (add it to
-**System Settings → General → Login Items** to have it start automatically). Its
-menu bar icon shows service status (polled from the loopback API) and lets you:
+controller (AppKit, no dependencies). It **starts automatically** right after
+install and at every login (via a LaunchAgent), so the icon appears without
+opening it manually. Its menu bar icon shows service status (polled from the
+loopback API) and lets you:
 
 - **Configuration…** — edit `log_dir`, ports, and retention, then Save & Restart.
 - **Start / Stop Service** — controls the launchd daemon.

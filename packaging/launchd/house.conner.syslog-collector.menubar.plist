@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>house.conner.syslog-collector.menubar</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Applications/Syslog Collector.app/Contents/MacOS/SyslogCollector</string>
+    </array>
+    <!-- Start the menu bar app at each user login. No KeepAlive, so the app's
+         own Quit stays quit until the next login. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+</dict>
+</plist>
