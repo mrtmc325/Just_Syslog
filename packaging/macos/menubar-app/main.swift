@@ -251,7 +251,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func closeConfig() { win?.orderOut(nil) }
 
-    @objc func quit() { NSApp.terminate(nil) }
+    @objc func quit() {
+        // Quit = stop the collector service too, then exit. Only prompt for
+        // admin when the service is actually running; otherwise just exit.
+        if !running {
+            NSApp.terminate(nil)
+            return
+        }
+        DispatchQueue.global().async {
+            _ = runPrivileged("launchctl bootout system \(PLIST_PATH) 2>/dev/null || launchctl bootout system/\(DAEMON_LABEL)")
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
 }
 
 let app = NSApplication.shared
