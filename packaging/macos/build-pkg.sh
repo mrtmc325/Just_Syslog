@@ -27,16 +27,27 @@ APPDIR=$(mktemp -d)
 sh packaging/macos/menubar-app/build-app.sh "$APPDIR/Syslog Collector.app" >/dev/null
 
 STAGE=$(mktemp -d)
-mkdir -p "$STAGE/usr/local/bin" "$STAGE/Library/LaunchDaemons" "$STAGE/etc/syslog-collector" "$STAGE/Applications"
+mkdir -p "$STAGE/usr/local/bin" "$STAGE/Library/LaunchDaemons" "$STAGE/Library/LaunchAgents" \
+         "$STAGE/etc/syslog-collector" "$STAGE/Applications"
 install -m 0755 "$BIN" "$STAGE/usr/local/bin/syslog-collector"
 install -m 0644 packaging/launchd/house.conner.syslog-collector.plist "$STAGE/Library/LaunchDaemons/"
+install -m 0644 packaging/launchd/house.conner.syslog-collector.menubar.plist "$STAGE/Library/LaunchAgents/"
 install -m 0644 packaging/config.sample.txt "$STAGE/etc/syslog-collector/config.txt"
 cp -R "$APPDIR/Syslog Collector.app" "$STAGE/Applications/"
 
 chmod +x packaging/macos/scripts/postinstall
+
+# Force the app to install at /Applications rather than being relocated to any
+# existing copy the installer discovers (pkgbuild defaults bundles to relocatable).
+COMPONENT="$APPDIR/component.plist"
+pkgbuild --analyze --root "$STAGE" "$COMPONENT" >/dev/null
+/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$COMPONENT" 2>/dev/null \
+    || plutil -replace 0.BundleIsRelocatable -bool false "$COMPONENT"
+
 OUT="$ROOT/SyslogCollector-${VERSION}-macos.pkg"
 pkgbuild \
     --root "$STAGE" \
+    --component-plist "$COMPONENT" \
     --scripts packaging/macos/scripts \
     --identifier house.conner.syslog-collector \
     --version "$VERSION" \
