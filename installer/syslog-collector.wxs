@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+
+  WiX v5 source for a single-file x64 MSI. Installs syslogd.exe into Program
+  Files, registers the auto-start "SyslogCollector" service, opens inbound
+  UDP/514, and writes the chosen log directory to config.txt. Everything is
+  declarative, so uninstall removes the service, the firewall rule, and config.
+
+  Build with installer\build-msi.ps1 (which passes ExeSource). The exe path is
+  supplied on the command line:  wix build ... -d ExeSource="<path>\syslogd.exe"
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall">
+
+  <Package Name="Syslog Collector"
+           Manufacturer="Tristan Conner"
+           Version="1.0.0.0"
+           UpgradeCode="4146CA9C-75B3-4F7A-91DE-C0483160F66E"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Syslog Collector is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Log directory: default here, override at install time with:
+         msiexec /i SyslogCollector-1.0.0-x64.msi LOGDIR="D:\SyslogLogs" -->
+    <Property Id="LOGDIR" Value="C:\SyslogCollector\logs" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="SyslogCollector" />
+    </StandardDirectory>
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="DATAFOLDER" Name="SyslogCollector" />
+    </StandardDirectory>
+
+    <!-- The program + the service + the firewall rule, one component. -->
+    <ComponentGroup Id="ProgramFiles" Directory="INSTALLFOLDER">
+      <Component Id="SyslogdExe" Bitness="always64">
+        <File Id="syslogd.exe" Source="$(var.ExeSource)" KeyPath="yes" />
+
+        <ServiceInstall Id="SvcInstall"
+                        Name="SyslogCollector"
+                        DisplayName="Syslog Collector"
+                        Description="Collects syslog (UDP/514) from network hosts into local log files and serves a local web viewer."
+                        Type="ownProcess"
+                        Start="auto"
+                        ErrorControl="normal"
+                        Account="LocalSystem"
+                        Arguments="service"
+                        Vital="yes" />
+
+        <ServiceControl Id="SvcControl"
+                        Name="SyslogCollector"
+                        Start="install"
+                        Stop="both"
+                        Remove="uninstall"
+                        Wait="no" />
+
+        <!-- Inbound UDP/514 allowed on all profiles; removed on uninstall. -->
+        <fw:FirewallException Id="Syslog514"
+                              Name="Syslog Collector UDP 514"
+                              Description="Inbound syslog for Syslog Collector"
+                              Port="514"
+                              Protocol="udp"
+                              Scope="any" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- config.txt in %ProgramData%\SyslogCollector. Only log_dir is written;
+         ports/retention default in-app when absent. The [syslog] header is
+         ignored by the parser (no '='), so this stays valid key=value. -->
+    <Component Id="Config" Directory="DATAFOLDER" Guid="6E0E7C7A-4B2C-4E0B-9E4F-2C3D4E5F6A7B">
+      <CreateFolder />
+      <IniFile Id="CfgLogDir"
+               Action="createLine"
+               Directory="DATAFOLDER"
+               Name="config.txt"
+               Section="syslog"
+               Key="log_dir"
+               Value="[LOGDIR]" />
+      <RegistryValue Root="HKLM" Key="Software\SyslogCollector"
+                     Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+      <RemoveFolder Id="RemoveDataFolder" On="uninstall" />
+    </Component>
+
+    <Feature Id="Main" Title="Syslog Collector" Level="1">
+      <ComponentGroupRef Id="ProgramFiles" />
+      <ComponentRef Id="Config" />
+    </Feature>
+
+  </Package>
+</Wix>

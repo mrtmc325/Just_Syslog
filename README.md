@@ -32,19 +32,35 @@ Binaries land in `dist\x64\syslogd.exe` (and `dist\x86\syslogd.exe`).
 
 ## Install
 
-**Option A — PowerShell (no extra tooling).** Elevated PowerShell:
+**Option A — MSI (single file, recommended).** Build it once with WiX v5
+(`dotnet tool install --global wix`), then distribute the one `.msi`:
+
+```powershell
+.\installer\build-msi.ps1
+```
+
+That produces `SyslogCollector-1.0.0-x64.msi`. Install it (double-click, or):
+
+```powershell
+msiexec /i SyslogCollector-1.0.0-x64.msi LOGDIR="D:\SyslogLogs"
+```
+
+The MSI natively installs the service, opens the firewall, writes config, and
+adds an Add/Remove Programs entry; `msiexec /x` reverses all of it. `LOGDIR` is
+optional (defaults to `C:\SyslogCollector\logs`); add `/qn` for a silent install.
+One MSI is x64; build a separate x86 MSI only if you need the 32-bit fallback.
+
+**Option B — PowerShell (no build tooling).** Elevated PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installer\install.ps1 -LogDir "D:\SyslogLogs"
 ```
 
-**Option B — distributable installer.** Compile `installer\syslog-collector.iss`
+**Option C — Inno Setup `.exe` installer.** Compile `installer\syslog-collector.iss`
 with Inno Setup (`ISCC.exe installer\syslog-collector.iss`) to get
-`SyslogCollector-1.0.0-Setup.exe`. Running it prompts for the log folder,
-installs into Program Files, registers the service + firewall rule, and adds an
-Add/Remove Programs entry.
+`SyslogCollector-1.0.0-Setup.exe`, which prompts for the log folder.
 
-Either way the installer:
+All three:
 
 1. Copies `syslogd.exe` to `C:\Program Files\SyslogCollector\`.
 2. Registers service **SyslogCollector** (start type *Automatic* — starts at boot).
