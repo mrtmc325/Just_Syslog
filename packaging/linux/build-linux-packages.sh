@@ -20,11 +20,17 @@ command -v nfpm >/dev/null 2>&1 || { echo "nfpm not found - install: https://nfp
 rustup target add "$TARGET" >/dev/null 2>&1 || true
 cargo build --release --target "$TARGET"
 
-export ARCH
-export BIN="$ROOT/target/$TARGET/release/syslogd"
+BIN="$ROOT/target/$TARGET/release/syslogd"
+[ -f "$BIN" ] || { echo "binary not found: $BIN"; exit 1; }
 
-nfpm package -f packaging/nfpm.yaml -p deb
-nfpm package -f packaging/nfpm.yaml -p rpm
+# Render the nfpm template with concrete values (sed, so it never depends on
+# nfpm's own env-var expansion). Placeholders are regex-safe.
+RENDERED="$ROOT/target/nfpm.rendered.yaml"
+sed -e "s|@@ARCH@@|$ARCH|g" -e "s|@@BIN@@|$BIN|g" packaging/nfpm.yaml > "$RENDERED"
+
+nfpm package -f "$RENDERED" -p deb
+nfpm package -f "$RENDERED" -p rpm
+rm -f "$RENDERED"
 
 echo "Built in $ROOT:"
 ls -1 syslog-collector*.deb syslog-collector*.rpm 2>/dev/null
