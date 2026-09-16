@@ -20,7 +20,11 @@
            Scope="perMachine"
            Compressed="yes">
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of Syslog Collector is already installed." />
+    <!-- AllowSameVersionUpgrades: reinstalling the same version (a rebuilt MSI
+         has a new ProductCode but the same version) replaces the existing
+         install instead of adding a second Programs-and-Features entry. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of Syslog Collector is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Log directory: default here, override at install time with:
