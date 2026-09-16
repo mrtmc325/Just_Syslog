@@ -27,6 +27,6 @@ try {
     Write-Host "Done. Binaries in dist\ :"
     Get-ChildItem -Recurse dist\*.exe | ForEach-Object { "  $($_.FullName)  ($([math]::Round($_.Length/1KB)) KB)" }
     Write-Host ""
-    Write-Host "Next: installer\install.ps1  (elevated)  - or build the Inno Setup installer."
+    Write-Host "Next: installer\install.ps1  (elevated)  - or build the MSI with installer\build-msi.ps1."
 }
 finally { Pop-Location }

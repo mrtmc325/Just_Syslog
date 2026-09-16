@@ -167,7 +167,7 @@ pub fn is_log_name(name: &str) -> bool {
 4. **HTTP** server + API + embedded UI (`http.rs`, `web/index.html`) — *done*.
 5. **Wiring**: UDP + store + HTTP threads, clean shutdown (`main.rs`) — *done*.
 6. **Windows service** + firewall + install/uninstall (`service.rs`) — *done*.
-7. **Installers**: `install.ps1`, Inno `.iss`, `build.ps1` — *done*.
+7. **Installers**: `install.ps1`, WiX `.msi`, `build.ps1` — *done*.
 8. **SBOM** (`sbom/app.cdx.json`) + dependency vuln review — *done*.
 9. **Verify on Windows**: build x64/x86, install, send from a second host, reboot,
    confirm auto-start and firewall — *pending (needs a Windows host)*.
@@ -225,5 +225,6 @@ pub fn is_log_name(name: &str) -> bool {
 Updated 2026-09-15: initial plan authored alongside the implementation.
 Updated 2026-09-15: ran /code-review (high) + /security-review. Fixed RFC3164 UTF-8 boundary panic, auto-cleanup starvation under continuous load, and a dead `ensure_open` handle-reuse guard; added `Host`-header validation as a DNS-rebinding defense. All in the same commit as this doc.
 Updated 2026-09-16: verified build+install on Windows. Added a single-file WiX v5 MSI (`installer/syslog-collector.wxs` + `build-msi.ps1`) that installs the service, firewall rule, and config declaratively (uninstall reverses all). MSI is now the recommended distributable; Inno `.exe` and `install.ps1` retained as alternatives.
+Updated 2026-09-16: removed the Inno Setup installer (`installer/syslog-collector.iss`) — the WiX MSI supersedes it (both produced an Add/Remove Programs entry; the MSI is the standard Windows distributable). PowerShell `install.ps1` remains as the no-tooling path.
 Updated 2026-09-16: ported to macOS/Linux (core was already portable; only the service layer was Windows-only). Init handled by launchd/systemd running `syslogd run`. Unix config/log paths (`/etc`, `/var/log`) in `config.rs`; packaging under `packaging/` — macOS `.pkg` (pkgbuild, verified building arm64 here) and Linux `.deb`/`.rpm` (nfpm, build-on-target). Firewall not auto-configured on Unix (documented). Zero external crates on Unix builds.
 Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
