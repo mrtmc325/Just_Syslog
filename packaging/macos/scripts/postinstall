@@ -13,4 +13,15 @@ launchctl bootout system "$PLIST" 2>/dev/null || true
 # Modern (bootstrap) with legacy (load) fallback.
 launchctl bootstrap system "$PLIST" 2>/dev/null || launchctl load -w "$PLIST" 2>/dev/null || true
 
+# Start the menu bar app now for the logged-in user (the LaunchAgent handles
+# future logins). Skip when installing without a GUI session (e.g. over SSH).
+AGENT=/Library/LaunchAgents/house.conner.syslog-collector.menubar.plist
+UID_CONSOLE=$(stat -f %u /dev/console 2>/dev/null || echo 0)
+if [ -n "$UID_CONSOLE" ] && [ "$UID_CONSOLE" != "0" ]; then
+    launchctl bootout "gui/$UID_CONSOLE" "$AGENT" 2>/dev/null || true
+    launchctl bootstrap "gui/$UID_CONSOLE" "$AGENT" 2>/dev/null \
+        || launchctl asuser "$UID_CONSOLE" open -a "/Applications/Syslog Collector.app" 2>/dev/null \
+        || true
+fi
+
 exit 0
