@@ -8,6 +8,11 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Single instance per session: a second launch (shortcut / auto-start / MSI) exits.
+$created = $false
+$script:Mutex = New-Object System.Threading.Mutex($true, "SyslogCollectorTray", [ref]$created)
+if (-not $created) { exit }
+
 $ServiceName = "SyslogCollector"
 $ConfigPath  = Join-Path $env:ProgramData "SyslogCollector\config.txt"
 $FieldDefs = [ordered]@{
