@@ -181,9 +181,9 @@ fn udp_loop(sock: UdpSocket, tx: std::sync::mpsc::SyncSender<Cmd>, running: Arc<
         match sock.recv_from(&mut buf) {
             Ok((n, addr)) if n > 0 => {
                 let m = Message::parse(&buf[..n], &addr.ip().to_string(), &now_rfc3339());
-                // Drop on overflow rather than block the receiver under flood.
-                // ponytail: bounded queue (10k). Add disk-backed spool only if a
-                // site genuinely sustains >10k msg burst faster than fsync.
+                // Drop on overflow rather than block the receiver under flood;
+                // the queue is bounded (10k). A disk-backed spool would only help
+                // a site that sustains a >10k message burst faster than fsync.
                 let _ = tx.try_send(Cmd::Msg(m));
             }
             Ok(_) => {}

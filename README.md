@@ -147,5 +147,4 @@ Log files are left in place.
   clear-text files. Point `log_dir` at an encrypted volume if collected logs are
   sensitive, and keep it off regulated-data hosts unless in scope and approved.
 
-See `docs/plans/syslog-server-2026-09-15.md` for the full design.
 Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
