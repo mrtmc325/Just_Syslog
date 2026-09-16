@@ -223,4 +223,5 @@ pub fn is_log_name(name: &str) -> bool {
 ---
 Updated 2026-09-15: initial plan authored alongside the implementation.
 Updated 2026-09-15: ran /code-review (high) + /security-review. Fixed RFC3164 UTF-8 boundary panic, auto-cleanup starvation under continuous load, and a dead `ensure_open` handle-reuse guard; added `Host`-header validation as a DNS-rebinding defense. All in the same commit as this doc.
+Updated 2026-09-16: verified build+install on Windows. Added a single-file WiX v5 MSI (`installer/syslog-collector.wxs` + `build-msi.ps1`) that installs the service, firewall rule, and config declaratively (uninstall reverses all). MSI is now the recommended distributable; Inno `.exe` and `install.ps1` retained as alternatives.
 Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
