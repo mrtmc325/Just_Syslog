@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Build the Linux .deb and .rpm from any host with Docker (e.g. macOS): cross-
 # builds the binary in a Linux container and packages it with nfpm. No host Rust

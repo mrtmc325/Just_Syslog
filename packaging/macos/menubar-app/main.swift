@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Menu bar controller for the Syslog Collector service (macOS). Reads live
 // status from the collector's loopback HTTP API (no privilege needed) and

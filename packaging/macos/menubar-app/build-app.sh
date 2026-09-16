@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Compile the menu bar app into a .app bundle (AppKit; no third-party deps).
 # Requires the Xcode Command Line Tools (swiftc). Usage: build-app.sh [OUT.app]

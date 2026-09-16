@@ -23,6 +23,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright (c) 2026 Tristan Conner. All rights reserved.</string>
+    <string>Copyright (c) 2026 Tristan Conner. MIT License.</string>
 </dict>
 </plist>

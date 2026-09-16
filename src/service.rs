@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Windows service integration (install / uninstall / SCM entry point) plus the
 // inbound-firewall rule. Windows-only; the rest of the program is portable.

@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Removes the service, firewall rule, Programs and Features entry, and program
 # files. Log files are left in place. Self-elevates via UAC, so it works both
