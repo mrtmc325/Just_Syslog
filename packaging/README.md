@@ -54,18 +54,24 @@ privilege.
 
 ## Linux `.deb` + `.rpm`
 
-Build on the target arch (needs Rust + [nfpm](https://nfpm.goreleaser.com/install/)):
+**From any host with Docker (macOS included)** — cross-builds in a container, no
+host Rust/nfpm needed:
 
 ```bash
-./packaging/linux/build-linux-packages.sh          # amd64
-ARCH=arm64 ./packaging/linux/build-linux-packages.sh
+./packaging/linux/build-in-docker.sh            # amd64 (ARCH=arm64 for aarch64)
+```
+
+**On a Linux host directly** (needs Rust + [nfpm](https://nfpm.goreleaser.com/install/)):
+
+```bash
+./packaging/linux/build-linux-packages.sh       # amd64 (ARCH=arm64 for aarch64)
 ```
 
 Install:
 
 ```bash
-sudo apt install ./syslog-collector_1.0.0_amd64.deb     # Debian/Ubuntu
-sudo dnf install ./syslog-collector-1.0.0.x86_64.rpm    # RHEL/Fedora
+sudo apt install ./syslog-collector_1.0.0_amd64.deb        # Debian/Ubuntu
+sudo dnf install ./syslog-collector-1.0.0-1.x86_64.rpm     # RHEL/Fedora
 ```
 
 The package creates a dedicated `syslog-collector` system user, enables the

@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
 #
 # One config -> .deb and .rpm via nfpm (https://nfpm.goreleaser.com).
-# ARCH and BIN are supplied by packaging/linux/build-linux-packages.sh.
+# @@ARCH@@ and @@BIN@@ are rendered by packaging/linux/build-linux-packages.sh (sed).
 name: syslog-collector
-arch: ${ARCH}
+arch: "@@ARCH@@"
 platform: linux
 version: "1.0.0"
 maintainer: Tristan Conner <tristan@conner.house>
@@ -16,7 +16,7 @@ license: Proprietary
 section: admin
 priority: optional
 contents:
-  - src: ${BIN}
+  - src: "@@BIN@@"
     dst: /usr/bin/syslog-collector
     file_info:
       mode: 0755
