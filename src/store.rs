@@ -58,7 +58,7 @@ impl Store {
         let f = self.file.as_mut().expect("open");
         f.write_all(bytes)?;
         f.flush()?; // durability over throughput — syslog volume is modest.
-        // ponytail: per-write flush; batch on a timer only if a busy site needs it.
+        // Per-write flush; batch on a timer only if a busy site needs it.
         self.current_size += bytes.len() as u64;
         self.messages_written += 1;
         Ok(())
@@ -270,7 +270,7 @@ pub fn read_messages_json(dir: &Path, name: &str, limit: usize) -> io::Result<St
     if start > 0 && !lines.is_empty() {
         lines.remove(0); // drop partial first line from the tail cut
     }
-    // ponytail: tail-scan, O(window). Add an index only if huge files need paging.
+    // Tail-scan, O(window). Add an index only if huge files need paging.
     let take = lines.len().min(limit);
     let body = lines[lines.len() - take..]
         .iter()
