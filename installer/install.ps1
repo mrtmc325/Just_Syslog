@@ -82,9 +82,28 @@ if (Test-Path $srcUninstall) {
     $arpNote = "uninstall.ps1 not found next to install.ps1 - skipped Programs and Features entry"
 }
 
+# --- System tray controller (parity with the macOS menu bar app) ---
+$srcTray = Join-Path $here "tray"
+if (Test-Path $srcTray) {
+    $destTray = Join-Path $dest "tray"
+    New-Item -ItemType Directory -Force -Path $destTray | Out-Null
+    Copy-Item -Path (Join-Path $srcTray "*") -Destination $destTray -Recurse -Force
+    $trayVbs = Join-Path $destTray "SyslogTray.vbs"
+    # Start the tray at each login (all users).
+    $runKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+    New-ItemProperty -Path $runKey -Name "SyslogCollectorTray" `
+        -Value "wscript.exe `"$trayVbs`"" -PropertyType String -Force | Out-Null
+    # Launch now in the current (non-elevated) desktop session via Explorer.
+    Start-Process explorer.exe -ArgumentList "`"$trayVbs`""
+    $trayNote = "tray icon installed (starts at login)"
+} else {
+    $trayNote = "tray\ folder not found - skipped tray icon"
+}
+
 Write-Host ""
 Write-Host "Installed. Service 'SyslogCollector' is set to start automatically at boot."
 Write-Host "  Viewer : http://127.0.0.1:$UiPort/"
 Write-Host "  Logs   : $LogDir  (first file appears after the first message)"
 Write-Host "  Manage : services.msc  ->  Syslog Collector"
+Write-Host "  Tray   : $trayNote"
 Write-Host "  Remove : $arpNote"

@@ -29,6 +29,13 @@ if (Test-Path $destExe) {
     sc.exe delete SyslogCollector | Out-Null
 }
 
+# Stop the tray app and remove its login entry.
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like "*SyslogTray.ps1*" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
+    -Name "SyslogCollectorTray" -ErrorAction SilentlyContinue
+
 # Remove the Programs and Features (Add/Remove Programs) entry.
 $regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SyslogCollector"
 if (Test-Path $regKey) { Remove-Item -Path $regKey -Recurse -Force }
