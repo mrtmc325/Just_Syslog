@@ -63,6 +63,17 @@ Both:
 2. Registers service **SyslogCollector** (start type *Automatic* — starts at boot).
 3. Opens inbound **UDP/514** in Windows Firewall (`profile=any`).
 4. Writes config to `%ProgramData%\SyslogCollector\config.txt`.
+5. Installs a **system tray controller** (starts at login) — the Windows
+   equivalent of the macOS menu bar app.
+
+### System tray (Windows)
+
+A notification-area icon (WinForms, no dependencies) mirrors the macOS menu bar
+app. Right-click it to **Start / Stop Service**, edit **Configuration** (fields
++ Save & Restart), **Clear Logs**, **Open Viewer**; **Quit** stops the service
+and exits. Status (Running/Stopped + message count) shows in the tooltip and
+menu. Service/config/log actions prompt for elevation (UAC), like the macOS
+admin prompts. To run it by hand: `wscript "C:\Program Files\SyslogCollector\tray\SyslogTray.vbs"`.
 
 ## Install (macOS / Linux)
 
