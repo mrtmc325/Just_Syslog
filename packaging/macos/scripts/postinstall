@@ -1,0 +1,16 @@
+#!/bin/sh
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# pkg postinstall: create the log dir and load the LaunchDaemon (runs as root).
+set -e
+
+mkdir -p /var/log/syslog-collector
+chmod 0755 /var/log/syslog-collector
+mkdir -p /etc/syslog-collector
+
+PLIST=/Library/LaunchDaemons/house.conner.syslog-collector.plist
+# Reload cleanly if it was already loaded (upgrade).
+launchctl bootout system "$PLIST" 2>/dev/null || true
+# Modern (bootstrap) with legacy (load) fallback.
+launchctl bootstrap system "$PLIST" 2>/dev/null || launchctl load -w "$PLIST" 2>/dev/null || true
+
+exit 0

@@ -80,21 +80,35 @@ impl Config {
     }
 }
 
-/// Config file lives next to the data on Windows (%ProgramData%), or cwd else.
+/// Config file: `%ProgramData%\SyslogCollector\config.txt` on Windows,
+/// `/etc/syslog-collector/config.txt` on macOS/Linux.
 pub fn config_path() -> PathBuf {
-    base_dir().join("config.txt")
-}
-
-fn base_dir() -> PathBuf {
     #[cfg(windows)]
     {
-        if let Ok(pd) = std::env::var("ProgramData") {
-            return PathBuf::from(pd).join("SyslogCollector");
-        }
+        windows_base().join("config.txt")
     }
-    PathBuf::from(".").join("syslog-collector-data")
+    #[cfg(not(windows))]
+    {
+        PathBuf::from("/etc/syslog-collector/config.txt")
+    }
 }
 
+/// Default logs: `%ProgramData%\SyslogCollector\logs` on Windows,
+/// `/var/log/syslog-collector` on macOS/Linux.
 fn default_log_dir() -> PathBuf {
-    base_dir().join("logs")
+    #[cfg(windows)]
+    {
+        windows_base().join("logs")
+    }
+    #[cfg(not(windows))]
+    {
+        PathBuf::from("/var/log/syslog-collector")
+    }
+}
+
+#[cfg(windows)]
+fn windows_base() -> PathBuf {
+    std::env::var("ProgramData")
+        .map(|pd| PathBuf::from(pd).join("SyslogCollector"))
+        .unwrap_or_else(|_| PathBuf::from(".").join("syslog-collector-data"))
 }

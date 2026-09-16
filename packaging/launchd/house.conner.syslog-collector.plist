@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>house.conner.syslog-collector</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/syslog-collector</string>
+        <string>run</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/syslog-collector/service.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/syslog-collector/service.err.log</string>
+</dict>
+</plist>
