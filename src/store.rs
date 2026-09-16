@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+// Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+// SPDX-License-Identifier: MIT
 //
 // Single-owner log store. One thread owns all file handles, so there are no
 // write races and the active file is never deleted by cleanup. Records are

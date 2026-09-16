@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Build .deb and .rpm on Linux. Requires Rust and nfpm
 # (https://nfpm.goreleaser.com/install/). Build on the target arch (default

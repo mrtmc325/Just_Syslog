@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 #
 # Build release binaries on Windows. x64 always; add -X86 for the 32-bit fallback.
 # Requires: rustup + the MSVC build tools (Visual Studio C++ workload).

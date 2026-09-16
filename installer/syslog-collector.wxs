@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+<!-- Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+     SPDX-License-Identifier: MIT
 
   WiX v5 source for a single-file x64 MSI. Installs syslogd.exe into Program
   Files, registers the auto-start "SyslogCollector" service, opens inbound
