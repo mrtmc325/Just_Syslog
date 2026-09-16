@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 # deb/rpm pre-remove: stop and disable the service. Logs/config/user are kept.
 set -e
 

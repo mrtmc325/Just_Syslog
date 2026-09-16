@@ -1,5 +1,6 @@
 #!/bin/sh
-# Copyright (c) 2026 Tristan Conner <tristan@conner.house>. All rights reserved.
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
 # deb/rpm post-install: create the service user, log dir, and enable the service.
 set -e
 
