@@ -93,9 +93,21 @@ if (Test-Path $srcTray) {
     $runKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
     New-ItemProperty -Path $runKey -Name "SyslogCollectorTray" `
         -Value "wscript.exe `"$trayVbs`"" -PropertyType String -Force | Out-Null
+    # Start Menu + Desktop shortcuts (all users) to the tray controller.
+    $wsh = New-Object -ComObject WScript.Shell
+    $wscript = Join-Path $env:SystemRoot "System32\wscript.exe"
+    foreach ($dir in @("$env:PUBLIC\Desktop", [Environment]::GetFolderPath("CommonPrograms"))) {
+        $lnk = $wsh.CreateShortcut((Join-Path $dir "Syslog Collector.lnk"))
+        $lnk.TargetPath = $wscript
+        $lnk.Arguments = "`"$trayVbs`""
+        $lnk.WorkingDirectory = $destTray
+        $lnk.IconLocation = (Join-Path $destTray "syslog.ico")
+        $lnk.Description = "Open the Syslog Collector tray controller"
+        $lnk.Save()
+    }
     # Launch now in the current (non-elevated) desktop session via Explorer.
     Start-Process explorer.exe -ArgumentList "`"$trayVbs`""
-    $trayNote = "tray icon installed (starts at login)"
+    $trayNote = "tray + Start Menu/Desktop shortcuts installed (starts at login)"
 } else {
     $trayNote = "tray\ folder not found - skipped tray icon"
 }

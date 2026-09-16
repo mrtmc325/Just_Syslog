@@ -36,6 +36,11 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction Silen
 Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
     -Name "SyslogCollectorTray" -ErrorAction SilentlyContinue
 
+# Remove Start Menu + Desktop shortcuts.
+foreach ($dir in @("$env:PUBLIC\Desktop", [Environment]::GetFolderPath("CommonPrograms"))) {
+    Remove-Item -LiteralPath (Join-Path $dir "Syslog Collector.lnk") -Force -ErrorAction SilentlyContinue
+}
+
 # Remove the Programs and Features (Add/Remove Programs) entry.
 $regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SyslogCollector"
 if (Test-Path $regKey) { Remove-Item -Path $regKey -Recurse -Force }
