@@ -22,12 +22,20 @@ if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
     throw "WiX CLI not found. Install it with:  dotnet tool install --global wix   (needs the .NET SDK: winget install Microsoft.DotNet.SDK.8)"
 }
 Write-Host "== Ensuring WiX Firewall extension =="
-wix extension add -g WixToolset.Firewall.wixext | Out-Null
+# Pin the extension to the installed WiX version, or `wix build` can't resolve it.
+$wixRaw = (& wix --version | Select-Object -First 1)
+if ($wixRaw -match '(\d+\.\d+\.\d+)') { $wixVersion = $Matches[1] }
+else { throw "Could not read WiX version from '$wixRaw'." }
+Write-Host "   WiX $wixVersion"
+$fwExt = "WixToolset.Firewall.wixext/$wixVersion"
+& wix extension add -g $fwExt
+if ($LASTEXITCODE -ne 0) { throw "Could not add $fwExt - check network / NuGet access, then retry." }
 
 $wxs = Join-Path $root "installer\syslog-collector.wxs"
 $out = Join-Path $root "SyslogCollector-1.0.0-x64.msi"
 Write-Host "== Building MSI =="
-wix build $wxs -arch x64 -ext WixToolset.Firewall.wixext -d "ExeSource=$exe" -o $out
+& wix build $wxs -arch x64 -ext $fwExt -d "ExeSource=$exe" -o $out
+if ($LASTEXITCODE -ne 0) { throw "wix build failed (exit $LASTEXITCODE) - no MSI produced." }
 
 Write-Host ""
 Write-Host "MSI built: $out"
