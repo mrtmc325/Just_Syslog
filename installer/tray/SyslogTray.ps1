@@ -58,12 +58,15 @@ function Get-Status {
 # Run a PowerShell command elevated (UAC), quoting-safe via -EncodedCommand.
 function Invoke-Elevated([string]$command) {
     $enc = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
-    Start-Process powershell.exe -Verb RunAs -Wait `
-        -ArgumentList "-NoProfile -WindowStyle Hidden -EncodedCommand $enc"
+    try {
+        Start-Process powershell.exe -Verb RunAs -Wait `
+            -ArgumentList "-NoProfile -WindowStyle Hidden -EncodedCommand $enc"
+    } catch { }  # user cancelled the UAC prompt
 }
 
-function Start-Svc { Start-Process sc.exe -ArgumentList "start", $ServiceName -Verb RunAs -Wait; Update-Status }
-function Stop-Svc  { Start-Process sc.exe -ArgumentList "stop",  $ServiceName -Verb RunAs -Wait; Update-Status }
+# -Wait blocks until sc.exe returns; try/catch tolerates a cancelled UAC prompt.
+function Start-Svc { try { Start-Process sc.exe -ArgumentList "start", $ServiceName -Verb RunAs -Wait } catch { }; Update-Status }
+function Stop-Svc  { try { Start-Process sc.exe -ArgumentList "stop",  $ServiceName -Verb RunAs -Wait } catch { }; Update-Status }
 
 function Clear-Logs {
     $cfg = Get-Config
@@ -125,7 +128,7 @@ function Open-Viewer { Start-Process "http://127.0.0.1:$((Get-Config).ui_port)/"
 function Quit-Tray {
     # Parity with macOS: stop the service too, then exit. Only prompt if running.
     if ((Get-Status).running) {
-        Start-Process sc.exe -ArgumentList "stop", $ServiceName -Verb RunAs -Wait
+        try { Start-Process sc.exe -ArgumentList "stop", $ServiceName -Verb RunAs -Wait } catch { }
     }
     $script:Notify.Visible = $false
     $script:Notify.Dispose()
@@ -174,5 +177,10 @@ $timer.Interval = 5000
 $timer.Add_Tick({ Update-Status })
 Update-Status
 $timer.Start()
+
+# Cold start: if the service is stopped, bring it up now so launching the app
+# starts everything (tray + web + syslog listener). Prompts for UAC once;
+# cancelling just leaves the tray up with the service stopped.
+if (-not (Get-Status).running) { Start-Svc }
 
 [System.Windows.Forms.Application]::Run()
