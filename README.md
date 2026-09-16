@@ -17,8 +17,8 @@ launchd / systemd). Single native binary, no runtime to install.
 
 - **To run (end users):** nothing. The installer places a native `.exe`.
 - **To build (developer, once):** [Rust](https://rustup.rs) + the MSVC C++ build
-  tools (Visual Studio "Desktop development with C++"). For the distributable
-  installer, [Inno Setup](https://jrsoftware.org/isdl.php).
+  tools (Visual Studio "Desktop development with C++"). For the MSI, the
+  [WiX v5 CLI](https://wixtoolset.org) (`dotnet tool install --global wix`).
 
 ## Build (on Windows)
 
@@ -57,11 +57,7 @@ One MSI is x64; build a separate x86 MSI only if you need the 32-bit fallback.
 powershell -ExecutionPolicy Bypass -File installer\install.ps1 -LogDir "D:\SyslogLogs"
 ```
 
-**Option C — Inno Setup `.exe` installer.** Compile `installer\syslog-collector.iss`
-with Inno Setup (`ISCC.exe installer\syslog-collector.iss`) to get
-`SyslogCollector-1.0.0-Setup.exe`, which prompts for the log folder.
-
-All three:
+Both:
 
 1. Copies `syslogd.exe` to `C:\Program Files\SyslogCollector\`.
 2. Registers service **SyslogCollector** (start type *Automatic* — starts at boot).
@@ -131,8 +127,8 @@ Then open the viewer and watch it appear.
 powershell -ExecutionPolicy Bypass -File installer\uninstall.ps1
 ```
 
-Or use **Add/Remove Programs** — `install.ps1` (like the Inno and MSI installers)
-registers a *Syslog Collector* entry there, and its Uninstall button self-elevates.
+Or use **Add/Remove Programs** — `install.ps1` (like the MSI) registers a
+*Syslog Collector* entry there, and its Uninstall button self-elevates.
 Log files are left in place.
 
 ## Security notes
