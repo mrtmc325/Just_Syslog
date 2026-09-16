@@ -18,7 +18,7 @@
       "version": "1.0.0",
       "description": "Lean Windows syslog (UDP/514) collector with a local web viewer.",
       "purl": "pkg:cargo/syslog-collector@1.0.0",
-      "licenses": [ { "license": { "name": "Proprietary - (c) 2026 Tristan Conner. All rights reserved." } } ]
+      "licenses": [ { "expression": "MIT" } ]
     },
     "properties": [
       { "name": "rust:toolchain", "value": "rustc 1.94.1 (target: x86_64-pc-windows-msvc, i686-pc-windows-msvc)" },
