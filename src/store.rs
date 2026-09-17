@@ -32,6 +32,7 @@ pub struct StoreStats {
     pub total_bytes: u64,
     pub file_count: u64,
     pub current_file: String,
+    pub last_received: String, // RFC3339 of the most recent message ("" if none)
 }
 
 struct Store {
@@ -44,6 +45,7 @@ struct Store {
     current_name: String,
     current_size: u64,
     messages_written: u64,
+    last_received: String,
 }
 
 impl Store {
@@ -62,6 +64,7 @@ impl Store {
         // Per-write flush; batch on a timer only if a busy site needs it.
         self.current_size += bytes.len() as u64;
         self.messages_written += 1;
+        self.last_received = m.received.clone();
         Ok(())
     }
 
@@ -154,6 +157,7 @@ impl Store {
             s.total_bytes = files.iter().map(|f| f.2).sum();
         }
         s.total_messages = self.messages_written;
+        s.last_received = self.last_received.clone();
         s
     }
 }
@@ -302,6 +306,7 @@ pub fn run(
         current_name: String::new(),
         current_size: 0,
         messages_written: 0,
+        last_received: String::new(),
     };
     let idle = Duration::from_secs(auto_cleanup_secs.max(30));
     let mut last_cleanup = std::time::Instant::now();
@@ -369,6 +374,7 @@ mod tests {
             current_name: String::new(),
             current_size: 0,
             messages_written: 0,
+            last_received: String::new(),
         };
         assert!(!dir.exists()); // nothing until first message
         let m = Message::parse(b"<13>hello world", "10.0.0.1", &now_rfc3339());

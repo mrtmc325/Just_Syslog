@@ -55,6 +55,9 @@
   .sevchip .n { font-weight:600; }
   .sevchip:hover { background:#f0f6ff; }
   .sevchip.active { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+  .ver { font-size:11px; font-weight:500; color:#9aa4b2; }
+  .tablecap { font-size:12px; color:var(--muted); padding:0 0 8px; }
+  .copybtn { font-size:11px; padding:1px 8px; margin-left:6px; }
   /* Detail modal */
   .modal { position:fixed; inset:0; background:rgba(15,23,42,.5);
     display:none; align-items:flex-start; justify-content:center; padding:40px 16px; }
@@ -74,8 +77,9 @@
 </head>
 <body>
 <header>
-  <h1>Syslog Collector</h1>
+  <h1>Syslog Collector <span id="ver" class="ver"></span></h1>
   <span class="stat">Messages (file): <b id="st-msgs">–</b></span>
+  <span class="stat">Last message: <b id="st-last">–</b></span>
   <span class="stat">Files: <b id="st-files">–</b></span>
   <span class="stat">Total size: <b id="st-size">–</b></span>
   <span class="stat">Current: <b id="st-cur">–</b></span>
@@ -113,6 +117,7 @@
 
 <div class="wrap">
   <div id="sevbar" class="sevbar"></div>
+  <div id="count" class="tablecap"></div>
   <table>
     <thead><tr>
       <th>Received</th><th>Source</th><th>Host</th><th>Severity</th>
@@ -128,7 +133,8 @@
     <h2><button class="close" id="close">&times;</button>Message detail</h2>
     <div class="body">
       <dl class="kv" id="detail"></dl>
-      <div class="muted" style="font-size:12px;margin:6px 0 4px">Raw</div>
+      <div class="muted" style="font-size:12px;margin:6px 0 4px">Raw
+        <button id="copyraw" class="copybtn">Copy</button></div>
       <pre class="raw" id="raw"></pre>
     </div>
   </div>
@@ -162,7 +168,23 @@ async function loadStats(){
   $("st-size").textContent = fmtBytes(s.total_bytes ?? 0);
   $("st-cur").textContent = s.current_file || "—";
   $("st-dir").textContent = c.log_dir || "—";
+  if (s.version) $("ver").textContent = "v"+s.version;
+  lastReceivedIso = s.last_received || "";
+  renderLastReceived();
 }
+
+let lastReceivedIso = "";
+function ago(iso){
+  const t = Date.parse(iso); if (isNaN(t)) return "—";
+  const s = Math.max(0, Math.floor((Date.now()-t)/1000));
+  if (s < 1)     return "just now";
+  if (s < 60)    return s+"s ago";
+  if (s < 3600)  return Math.floor(s/60)+"m ago";
+  if (s < 86400) return Math.floor(s/3600)+"h ago";
+  return Math.floor(s/86400)+"d ago";
+}
+function renderLastReceived(){ $("st-last").textContent = lastReceivedIso ? ago(lastReceivedIso) : "never"; }
+setInterval(renderLastReceived, 1000);  // keep the "N s ago" ticking (runtime only, not stored)
 
 async function loadMessages(){
   const file = $("file").value;
@@ -194,6 +216,9 @@ function render(){
     shown++;
   }
   $("empty").style.display = shown ? "none" : "block";
+  $("count").textContent = CURRENT.length
+    ? (shown === CURRENT.length ? shown+" messages" : "Showing "+shown+" of "+CURRENT.length)
+    : "";
   renderSummary();
 }
 
@@ -318,6 +343,20 @@ $("sev").addEventListener("change", render);
 $("source").addEventListener("change", render);
 $("filter").addEventListener("input", render);
 $("export").addEventListener("click", exportCsv);
+function copied(){ const b=$("copyraw"); b.textContent="Copied"; setTimeout(()=>{ b.textContent="Copy"; }, 1200); }
+function fallbackCopy(text){
+  const ta=document.createElement("textarea");
+  ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  let ok=false; try { ok=document.execCommand("copy"); } catch(e){}
+  ta.remove(); return ok;
+}
+$("copyraw").addEventListener("click", ()=>{
+  const text = $("raw").textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(copied, ()=>{ if (fallbackCopy(text)) copied(); });
+  } else if (fallbackCopy(text)) { copied(); }
+});
 $("close").addEventListener("click", ()=>$("modal").classList.remove("open"));
 $("modal").addEventListener("click", e=>{ if(e.target===$("modal")) $("modal").classList.remove("open"); });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("modal").classList.remove("open"); });

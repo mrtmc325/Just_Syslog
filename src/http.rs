@@ -139,9 +139,10 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
             let body = if tx.send(Cmd::Stats(r_tx)).is_ok() {
                 match r_rx.recv_timeout(Duration::from_secs(5)) {
                     Ok(s) => format!(
-                        "{{\"total_messages\":{},\"total_bytes\":{},\"file_count\":{},\"current_file\":\"{}\"}}",
-                        s.total_messages, s.total_bytes, s.file_count,
-                        crate::syslog::json_escape(&s.current_file)
+                        "{{\"version\":\"{}\",\"total_messages\":{},\"total_bytes\":{},\"file_count\":{},\"current_file\":\"{}\",\"last_received\":\"{}\"}}",
+                        env!("CARGO_PKG_VERSION"), s.total_messages, s.total_bytes, s.file_count,
+                        crate::syslog::json_escape(&s.current_file),
+                        crate::syslog::json_escape(&s.last_received)
                     ),
                     Err(_) => "{}".into(),
                 }
