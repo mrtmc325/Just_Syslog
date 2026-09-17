@@ -46,6 +46,15 @@
     font-size:11px; font-weight:600; color:#fff; text-align:center; }
   .muted { color:var(--muted); }
   .empty { padding:40px; text-align:center; color:var(--muted); }
+  /* Severity summary bar */
+  .sevbar { display:flex; gap:6px; flex-wrap:wrap; padding:10px 0 12px; }
+  .sevchip { display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    font:inherit; font-size:12px; padding:3px 9px; border:1px solid var(--line);
+    border-radius:14px; background:#fff; color:var(--ink); }
+  .sevchip .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .sevchip .n { font-weight:600; }
+  .sevchip:hover { background:#f0f6ff; }
+  .sevchip.active { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
   /* Detail modal */
   .modal { position:fixed; inset:0; background:rgba(15,23,42,.5);
     display:none; align-items:flex-start; justify-content:center; padding:40px 16px; }
@@ -99,6 +108,7 @@
 </div>
 
 <div class="wrap">
+  <div id="sevbar" class="sevbar"></div>
   <table>
     <thead><tr>
       <th>Received</th><th>Source</th><th>Host</th><th>Severity</th>
@@ -123,6 +133,7 @@
 <script>
 const SEV_CLASS = ["s-emerg","s-emerg","s-err","s-err","s-warn","s-notice","s-info","s-debug"];
 const SEV_COLOR = ["--s-emerg","--s-emerg","--s-err","--s-err","--s-warn","--s-notice","--s-info","--s-debug"];
+const SEV_NAMES = ["Emergency","Alert","Critical","Error","Warning","Notice","Informational","Debug"];
 let CURRENT = []; // last fetched messages
 
 const $ = id => document.getElementById(id);
@@ -174,6 +185,44 @@ function render(){
     shown++;
   }
   $("empty").style.display = shown ? "none" : "block";
+  renderSummary();
+}
+
+// Severity breakdown of the text-filtered view (ignores the severity filter, so
+// every level stays visible); each chip narrows the table to that level.
+function renderSummary(){
+  const term = $("filter").value.toLowerCase();
+  const counts = {}; let total = 0;
+  for (const m of CURRENT){
+    if (term){
+      const hay = (m.hostname+" "+m.app+" "+m.message+" "+m.source_ip).toLowerCase();
+      if (!hay.includes(term)) continue;
+    }
+    counts[m.severity] = (counts[m.severity]||0) + 1; total++;
+  }
+  const bar = $("sevbar"); bar.textContent = "";
+  const cur = $("sev").value;
+  bar.appendChild(chip("All", total, "", cur===""));
+  for (let s=0; s<=7; s++){
+    if (counts[s]) bar.appendChild(chip(SEV_NAMES[s], counts[s], String(s), cur===String(s), SEV_COLOR[s]));
+  }
+  bar.style.display = total ? "flex" : "none";
+}
+
+function chip(label, count, sevValue, active, colorVar){
+  const c = document.createElement("button");
+  c.className = "sevchip" + (active ? " active" : "");
+  if (colorVar){
+    const dot = document.createElement("span"); dot.className = "dot";
+    dot.style.background = "var("+colorVar+")"; c.appendChild(dot);
+  }
+  const t = document.createElement("span"); t.textContent = label; c.appendChild(t);
+  const n = document.createElement("span"); n.className = "n"; n.textContent = count; c.appendChild(n);
+  c.addEventListener("click", ()=>{
+    $("sev").value = (active && sevValue !== "") ? "" : sevValue;  // toggle off if re-clicked
+    render();
+  });
+  return c;
 }
 
 function td(text, cls){ const d=document.createElement("td"); if(cls)d.className=cls; d.textContent=text??""; return d; }
