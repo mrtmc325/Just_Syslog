@@ -15,7 +15,7 @@
 
   <Package Name="Syslog Collector"
            Manufacturer="Tristan Conner"
-           Version="1.0.0.0"
+           Version="1.0.2.0"
            UpgradeCode="4146CA9C-75B3-4F7A-91DE-C0483160F66E"
            Scope="perMachine"
            Compressed="yes">
@@ -28,7 +28,7 @@
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Log directory: default here, override at install time with:
-         msiexec /i SyslogCollector-1.0.0-x64.msi LOGDIR="D:\SyslogLogs" -->
+         msiexec /i SyslogCollector-1.0.2-x64.msi LOGDIR="D:\SyslogLogs" -->
     <Property Id="LOGDIR" Value="C:\SyslogCollector\logs" />
 
     <StandardDirectory Id="ProgramFiles64Folder">

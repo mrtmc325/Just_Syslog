@@ -6,7 +6,7 @@
 name: syslog-collector
 arch: "@@ARCH@@"
 platform: linux
-version: "1.0.0"
+version: "1.0.2"
 maintainer: Tristan Conner <tristan@conner.house>
 description: |
   Lean syslog server. Receives UDP/514 from network hosts, parses RFC 3164 /

@@ -19,7 +19,7 @@ What you expected instead.
 **Environment**
 - OS + version:
 - Install method: MSI / PowerShell / .pkg / .deb / .rpm / from source
-- Version: (e.g. 1.0.0)
+- Version: (e.g. 1.0.2)
 
 **Logs / screenshots**
 Any relevant output — please redact sensitive data.

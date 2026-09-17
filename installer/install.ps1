@@ -63,7 +63,7 @@ if (Test-Path $srcUninstall) {
     New-Item -Path $regKey -Force | Out-Null
     $arp = [ordered]@{
         DisplayName          = "Syslog Collector"
-        DisplayVersion       = "1.0.0"
+        DisplayVersion       = "1.0.2"
         Publisher            = "Tristan Conner"
         InstallLocation      = $dest
         DisplayIcon          = $destExe
