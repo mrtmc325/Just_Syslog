@@ -13,11 +13,11 @@
     ],
     "component": {
       "type": "application",
-      "bom-ref": "pkg:cargo/syslog-collector@1.0.0",
+      "bom-ref": "pkg:cargo/syslog-collector@1.0.2",
       "name": "syslog-collector",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "description": "Lean Windows syslog (UDP/514) collector with a local web viewer.",
-      "purl": "pkg:cargo/syslog-collector@1.0.0",
+      "purl": "pkg:cargo/syslog-collector@1.0.2",
       "licenses": [ { "expression": "MIT" } ]
     },
     "properties": [
@@ -87,7 +87,7 @@
   ],
   "dependencies": [
     {
-      "ref": "pkg:cargo/syslog-collector@1.0.0",
+      "ref": "pkg:cargo/syslog-collector@1.0.2",
       "dependsOn": [ "pkg:cargo/windows-service@0.8.1" ]
     },
     {

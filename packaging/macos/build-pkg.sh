@@ -8,7 +8,7 @@
 set -e
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$ROOT"
-VERSION=1.0.0
+VERSION=1.0.2
 
 if [ "$1" = "-universal" ]; then
     rustup target add aarch64-apple-darwin x86_64-apple-darwin
