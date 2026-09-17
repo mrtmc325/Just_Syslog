@@ -101,9 +101,13 @@
       <option value="6">Informational</option><option value="7">Debug</option>
     </select>
   </label>
+  <label>Source
+    <select id="source"><option value="">all</option></select>
+  </label>
   <input id="filter" type="text" placeholder="Filter host / app / text…">
   <label><input id="auto" type="checkbox"> auto-refresh</label>
   <button id="refresh">Refresh</button>
+  <button id="export" title="Download the filtered rows as CSV">Export CSV</button>
   <button id="cleanup" class="warn" title="Delete old / oversized log files now">Run cleanup</button>
 </div>
 
@@ -165,22 +169,27 @@ async function loadMessages(){
   const limit = $("limit").value;
   const q = "/api/messages?limit="+encodeURIComponent(limit)+(file?"&file="+encodeURIComponent(file):"");
   CURRENT = await fetch(q).then(r=>r.json()).catch(()=>[]);
+  populateSources();
   render();
+}
+
+function matchesText(m, term){
+  if (!term) return true;
+  return (m.hostname+" "+m.app+" "+m.message+" "+m.source_ip).toLowerCase().includes(term);
 }
 
 function render(){
   const term = $("filter").value.toLowerCase();
   const sev = $("sev").value;
+  const source = $("source").value;
   const rows = $("rows"); rows.textContent = "";
   let shown = 0;
   // newest first
   for (let i=CURRENT.length-1; i>=0; i--){
     const m = CURRENT[i];
     if (sev !== "" && String(m.severity) !== sev) continue;
-    if (term){
-      const hay = (m.hostname+" "+m.app+" "+m.message+" "+m.source_ip).toLowerCase();
-      if (!hay.includes(term)) continue;
-    }
+    if (source !== "" && m.source_ip !== source) continue;
+    if (!matchesText(m, term)) continue;
     rows.appendChild(rowEl(m, i));
     shown++;
   }
@@ -192,12 +201,11 @@ function render(){
 // every level stays visible); each chip narrows the table to that level.
 function renderSummary(){
   const term = $("filter").value.toLowerCase();
+  const source = $("source").value;
   const counts = {}; let total = 0;
   for (const m of CURRENT){
-    if (term){
-      const hay = (m.hostname+" "+m.app+" "+m.message+" "+m.source_ip).toLowerCase();
-      if (!hay.includes(term)) continue;
-    }
+    if (source !== "" && m.source_ip !== source) continue;
+    if (!matchesText(m, term)) continue;
     counts[m.severity] = (counts[m.severity]||0) + 1; total++;
   }
   const bar = $("sevbar"); bar.textContent = "";
@@ -223,6 +231,43 @@ function chip(label, count, sevValue, active, colorVar){
     render();
   });
   return c;
+}
+
+// Populate the Source dropdown from the loaded data (sender IPs + counts, most
+// active first), preserving the current selection.
+function populateSources(){
+  const counts = {};
+  for (const m of CURRENT) counts[m.source_ip] = (counts[m.source_ip]||0) + 1;
+  const sel = $("source"); const keep = sel.value;
+  sel.textContent = "";
+  const all = document.createElement("option");
+  all.value = ""; all.textContent = "all ("+CURRENT.length+")"; sel.appendChild(all);
+  for (const [ip,n] of Object.entries(counts).sort((a,b)=>b[1]-a[1])){
+    const o = document.createElement("option"); o.value = ip; o.textContent = ip+" ("+n+")"; sel.appendChild(o);
+  }
+  sel.value = [...sel.options].some(o=>o.value===keep) ? keep : "";
+}
+
+// Download the filtered view (all active filters) as CSV, oldest first.
+function exportCsv(){
+  const term = $("filter").value.toLowerCase();
+  const sev = $("sev").value, source = $("source").value;
+  const cols = ["received","source_ip","hostname","severity_name","facility_name","app","procid","msgid","message"];
+  const esc = v => '"' + String(v==null?"":v).replace(/"/g,'""') + '"';
+  const lines = [cols.join(",")];
+  for (const m of CURRENT){
+    if (sev !== "" && String(m.severity) !== sev) continue;
+    if (source !== "" && m.source_ip !== source) continue;
+    if (!matchesText(m, term)) continue;
+    lines.push(cols.map(c=>esc(m[c])).join(","));
+  }
+  const blob = new Blob([lines.join("\r\n")], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "syslog-export-" + new Date().toISOString().replace(/[:.]/g,"-").slice(0,19) + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
 function td(text, cls){ const d=document.createElement("td"); if(cls)d.className=cls; d.textContent=text??""; return d; }
@@ -270,7 +315,9 @@ $("refresh").addEventListener("click", refreshAll);
 $("file").addEventListener("change", ()=>{ loadMessages(); loadStats(); });
 $("limit").addEventListener("change", loadMessages);
 $("sev").addEventListener("change", render);
+$("source").addEventListener("change", render);
 $("filter").addEventListener("input", render);
+$("export").addEventListener("click", exportCsv);
 $("close").addEventListener("click", ()=>$("modal").classList.remove("open"));
 $("modal").addEventListener("click", e=>{ if(e.target===$("modal")) $("modal").classList.remove("open"); });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("modal").classList.remove("open"); });
