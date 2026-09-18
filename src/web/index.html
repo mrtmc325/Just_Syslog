@@ -9,10 +9,31 @@
 <style>
   /* System fonts only — no external assets (air-gap safe). */
   :root {
+    color-scheme: light;
     --bg:#f5f6f8; --panel:#fff; --ink:#1c2330; --muted:#6b7280;
     --line:#e3e6ea; --head:#1f2937; --accent:#2563eb;
+    --th-bg:#fafbfc; --hover:#f0f6ff;
     --s-emerg:#b91c1c; --s-err:#dc2626; --s-warn:#d97706;
     --s-notice:#2563eb; --s-info:#4b5563; --s-debug:#9ca3af;
+  }
+  /* Dark palette: follow the OS by default; data-theme (session toggle) overrides. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg:#0f141b; --panel:#1a2231; --ink:#e6eaf0; --muted:#94a3b8;
+      --line:#2a3444; --head:#0b0f16; --accent:#3b82f6;
+      --th-bg:#161d29; --hover:#232d3d;
+      --s-emerg:#ef4444; --s-err:#f05252; --s-warn:#f59e0b;
+      --s-notice:#3b82f6; --s-info:#94a3b8; --s-debug:#64748b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg:#0f141b; --panel:#1a2231; --ink:#e6eaf0; --muted:#94a3b8;
+    --line:#2a3444; --head:#0b0f16; --accent:#3b82f6;
+    --th-bg:#161d29; --hover:#232d3d;
+    --s-emerg:#ef4444; --s-err:#f05252; --s-warn:#f59e0b;
+    --s-notice:#3b82f6; --s-info:#94a3b8; --s-debug:#64748b;
   }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink);
@@ -26,22 +47,22 @@
     padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
   .controls label { font-size:12px; color:var(--muted); }
   select,input,button { font:inherit; padding:5px 9px; border:1px solid var(--line);
-    border-radius:6px; background:#fff; color:var(--ink); }
+    border-radius:6px; background:var(--panel); color:var(--ink); }
   input[type=text]{ min-width:200px; }
   button { cursor:pointer; }
   button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-  button.warn { background:#fff; color:#b45309; border-color:#f0c48a; }
+  button.warn { background:var(--panel); color:#b45309; border-color:#f0c48a; }
   .wrap { padding:0 16px 16px; }
   table { width:100%; border-collapse:collapse; background:var(--panel);
     border:1px solid var(--line); border-radius:8px; overflow:hidden; }
   thead th { text-align:left; font-size:11px; text-transform:uppercase;
-    letter-spacing:.4px; color:var(--muted); background:#fafbfc;
+    letter-spacing:.4px; color:var(--muted); background:var(--th-bg);
     padding:8px 10px; border-bottom:1px solid var(--line); position:sticky; top:0; }
   tbody td { padding:6px 10px; border-bottom:1px solid var(--line);
     vertical-align:top; white-space:nowrap; }
   tbody td.msg { white-space:normal; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     font-size:12.5px; max-width:640px; overflow:hidden; text-overflow:ellipsis; }
-  tbody tr:hover { background:#f0f6ff; cursor:pointer; }
+  tbody tr:hover { background:var(--hover); cursor:pointer; }
   .sev { display:inline-block; min-width:74px; padding:1px 7px; border-radius:10px;
     font-size:11px; font-weight:600; color:#fff; text-align:center; }
   .muted { color:var(--muted); }
@@ -50,10 +71,10 @@
   .sevbar { display:flex; gap:6px; flex-wrap:wrap; padding:10px 0 12px; }
   .sevchip { display:inline-flex; align-items:center; gap:6px; cursor:pointer;
     font:inherit; font-size:12px; padding:3px 9px; border:1px solid var(--line);
-    border-radius:14px; background:#fff; color:var(--ink); }
+    border-radius:14px; background:var(--panel); color:var(--ink); }
   .sevchip .dot { width:8px; height:8px; border-radius:50%; flex:none; }
   .sevchip .n { font-weight:600; }
-  .sevchip:hover { background:#f0f6ff; }
+  .sevchip:hover { background:var(--hover); }
   .sevchip.active { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
   .ver { font-size:11px; font-weight:500; color:#9aa4b2; }
   .tablecap { font-size:12px; color:var(--muted); padding:0 0 8px; }
@@ -62,7 +83,7 @@
   .modal { position:fixed; inset:0; background:rgba(15,23,42,.5);
     display:none; align-items:flex-start; justify-content:center; padding:40px 16px; }
   .modal.open { display:flex; }
-  .card { background:#fff; border-radius:10px; max-width:760px; width:100%;
+  .card { background:var(--panel); border-radius:10px; max-width:760px; width:100%;
     box-shadow:0 10px 40px rgba(0,0,0,.25); max-height:82vh; overflow:auto; }
   .card h2 { margin:0; padding:14px 18px; border-bottom:1px solid var(--line); font-size:15px; }
   .card .body { padding:6px 18px 18px; }
@@ -113,6 +134,7 @@
   <button id="refresh">Refresh</button>
   <button id="export" title="Download the filtered rows as CSV">Export CSV</button>
   <button id="cleanup" class="warn" title="Delete old / oversized log files now">Run cleanup</button>
+  <button id="theme" style="margin-left:auto" title="Toggle theme (this session only)"></button>
 </div>
 
 <div class="wrap">
@@ -376,6 +398,20 @@ function syncAutoRefresh(){
   }
 }
 $("auto").addEventListener("change", syncAutoRefresh);
+
+// Theme: follows the OS by default; this toggle overrides for the session only
+// (data-theme on <html>) — nothing is stored, so a full reload reverts to the OS.
+function isDark(){
+  const t = document.documentElement.dataset.theme;
+  return t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+}
+function updateThemeBtn(){ $("theme").textContent = isDark() ? "☀ Light" : "☾ Dark"; }
+$("theme").addEventListener("click", ()=>{
+  document.documentElement.dataset.theme = isDark() ? "light" : "dark";
+  updateThemeBtn();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeBtn);
+updateThemeBtn();
 
 refreshAll();
 syncAutoRefresh();   // honor a browser-restored checked state on reload (no "flap" needed)

@@ -13,6 +13,8 @@ All notable changes are documented here. Format loosely follows
 - Web viewer: header now shows the **collector version** and a live
   **"last message N s ago"** indicator; a **"showing X of Y"** row count; and a
   **Copy** button on the message-detail view.
+- Web viewer: **dark theme** — follows the OS (`prefers-color-scheme`) with a
+  session-only toggle (no preference is stored client-side).
 
 ## [1.0.1] — 2026-09-16
 
