@@ -21,7 +21,7 @@ description: |
   RFC 5424 (and anything else, best-effort), stores newline-delimited JSON
   logs, and serves a local web viewer on 127.0.0.1:8514. Runs as a systemd
   service that starts at boot.
-license: Proprietary
+license: MIT
 section: admin
 priority: optional
 contents:

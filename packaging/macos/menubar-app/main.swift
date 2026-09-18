@@ -75,6 +75,32 @@ func runPrivileged(_ shell: String) -> Bool {
     catch { return false }
 }
 
+/// Single-quote a value for safe interpolation into a POSIX shell command.
+func shq(_ s: String) -> String {
+    "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
+}
+
+/// Validate config field values at the trust boundary. Returns an error message
+/// if any value is unsafe. These are written to config and reach a root shell,
+/// so they must be strict — this closes the command-injection path.
+func validateConfig(_ values: [String: String]) -> String? {
+    let dir = values["log_dir"] ?? ""
+    if dir.range(of: "^/[A-Za-z0-9 ._/-]+$", options: .regularExpression) == nil {
+        return "Log directory must be an absolute path using only letters, digits, space, and . _ - /"
+    }
+    for key in ["udp_port", "ui_port"] {
+        guard let p = Int(values[key] ?? ""), (1...65535).contains(p) else {
+            return "\(key) must be a whole number from 1 to 65535."
+        }
+    }
+    for key in ["max_file_mb", "retention_days", "max_total_mb"] {
+        guard let n = Int(values[key] ?? ""), n > 0 else {
+            return "\(key) must be a positive whole number."
+        }
+    }
+    return nil
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var timer: Timer?
@@ -178,9 +204,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         a.alertStyle = .warning
         NSApp.activate(ignoringOtherApps: true)
         guard a.runModal() == .alertFirstButtonReturn else { return }
+        // Fail closed if the saved log dir isn't a valid path — never run a root
+        // command built from an unvalidated value.
+        if let err = validateConfig(cfg.values) {
+            let e = NSAlert(); e.messageText = "Cannot clear logs"; e.informativeText = err
+            e.alertStyle = .warning; NSApp.activate(ignoringOtherApps: true); e.runModal(); return
+        }
         let dir = cfg.logDir
         DispatchQueue.global().async {
-            _ = runPrivileged("rm -f '\(dir)'/*.jsonl 2>/dev/null; launchctl kickstart -k system/\(DAEMON_LABEL) 2>/dev/null || true")
+            // shq() quotes the dir; the *.jsonl glob stays outside the quotes.
+            _ = runPrivileged("rm -f \(shq(dir))/*.jsonl 2>/dev/null; launchctl kickstart -k system/\(DAEMON_LABEL) 2>/dev/null || true")
             DispatchQueue.main.async { self.refresh() }
         }
     }
@@ -240,11 +273,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for def in FIELD_DEFS {
             newCfg.values[def.key] = fields[def.key]?.stringValue.trimmingCharacters(in: .whitespaces) ?? ""
         }
+        // Validate at the boundary before anything is written or run as root.
+        if let err = validateConfig(newCfg.values) {
+            let e = NSAlert(); e.messageText = "Invalid configuration"; e.informativeText = err
+            e.alertStyle = .warning; NSApp.activate(ignoringOtherApps: true); e.runModal(); return
+        }
         let tmp = NSTemporaryDirectory() + "syslog-collector-\(UUID().uuidString).txt"
         guard (try? newCfg.serialize().write(toFile: tmp, atomically: true, encoding: .utf8)) != nil else { return }
         win?.orderOut(nil)
         DispatchQueue.global().async {
-            _ = runPrivileged("mkdir -p /etc/syslog-collector; cp '\(tmp)' '\(CONFIG_PATH)'; rm -f '\(tmp)'; launchctl kickstart -k system/\(DAEMON_LABEL) 2>/dev/null || true")
+            _ = runPrivileged("mkdir -p /etc/syslog-collector; cp \(shq(tmp)) \(shq(CONFIG_PATH)); rm -f \(shq(tmp)); launchctl kickstart -k system/\(DAEMON_LABEL) 2>/dev/null || true")
             DispatchQueue.main.async { self.refresh() }
         }
     }

@@ -5,7 +5,9 @@
 set -e
 
 mkdir -p /var/log/syslog-collector
-chmod 0755 /var/log/syslog-collector
+# 0750 (not world-readable): collected syslog may contain sensitive data, and the
+# root daemon writes files here. Others can't traverse the dir to read them.
+chmod 0750 /var/log/syslog-collector
 mkdir -p /etc/syslog-collector
 
 PLIST=/Library/LaunchDaemons/house.conner.syslog-collector.plist

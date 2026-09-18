@@ -23,9 +23,11 @@ if [ "$UID_CONSOLE" != "0" ]; then
 fi
 
 # Hard-kill anything still alive: a manually launched app, a slow bootout, or a
-# pre-rebrand "Syslog Collector.app" instance. Paths are specific so the daemon
-# and the menu bar app are matched independently (and nothing else is).
-pkill -f '/usr/local/bin/syslog-collector' 2>/dev/null || true
-pkill -f 'Contents/MacOS/SyslogCollector' 2>/dev/null || true
+# pre-rebrand "Syslog Collector.app" instance. Patterns are anchored to the start
+# of the command line (^) so an unrelated process that merely mentions the path
+# (e.g. `tail /usr/local/bin/syslog-collector`) is never matched. The app pattern
+# accepts either bundle name (`[^/]*\.app`), the daemon requires an exact path.
+pkill -f '^/usr/local/bin/syslog-collector( |$)' 2>/dev/null || true
+pkill -f '^/Applications/[^/]*\.app/Contents/MacOS/SyslogCollector' 2>/dev/null || true
 
 exit 0
