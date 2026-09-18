@@ -58,7 +58,7 @@ impl Config {
             fs::create_dir_all(parent)?;
         }
         let body = format!(
-            "# Syslog Collector configuration\n\
+            "# Just Syslog configuration\n\
              log_dir={}\n\
              udp_port={}\n\
              ui_port={}\n\

@@ -6,7 +6,7 @@
 # Requires the Xcode Command Line Tools (swiftc). Usage: build-app.sh [OUT.app]
 set -e
 DIR=$(cd "$(dirname "$0")" && pwd)
-OUT="${1:-$DIR/Syslog Collector.app}"
+OUT="${1:-$DIR/Just Syslog.app}"
 
 rm -rf "$OUT"
 mkdir -p "$OUT/Contents/MacOS" "$OUT/Contents/Resources"

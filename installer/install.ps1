@@ -62,7 +62,7 @@ if (Test-Path $srcUninstall) {
     $regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SyslogCollector"
     New-Item -Path $regKey -Force | Out-Null
     $arp = [ordered]@{
-        DisplayName          = "Syslog Collector"
+        DisplayName          = "Just Syslog"
         DisplayVersion       = "1.0.2"
         Publisher            = "Tristan Conner"
         InstallLocation      = $dest
@@ -97,12 +97,12 @@ if (Test-Path $srcTray) {
     $wsh = New-Object -ComObject WScript.Shell
     $wscript = Join-Path $env:SystemRoot "System32\wscript.exe"
     foreach ($dir in @("$env:PUBLIC\Desktop", [Environment]::GetFolderPath("CommonPrograms"))) {
-        $lnk = $wsh.CreateShortcut((Join-Path $dir "Syslog Collector.lnk"))
+        $lnk = $wsh.CreateShortcut((Join-Path $dir "Just Syslog.lnk"))
         $lnk.TargetPath = $wscript
         $lnk.Arguments = "`"$trayVbs`""
         $lnk.WorkingDirectory = $destTray
         $lnk.IconLocation = (Join-Path $destTray "syslog.ico")
-        $lnk.Description = "Open the Syslog Collector tray controller"
+        $lnk.Description = "Open the Just Syslog tray controller"
         $lnk.Save()
     }
     # Launch now in the current (non-elevated) desktop session via Explorer.
@@ -116,6 +116,6 @@ Write-Host ""
 Write-Host "Installed. Service 'SyslogCollector' is set to start automatically at boot."
 Write-Host "  Viewer : http://127.0.0.1:$UiPort/"
 Write-Host "  Logs   : $LogDir  (first file appears after the first message)"
-Write-Host "  Manage : services.msc  ->  Syslog Collector"
+Write-Host "  Manage : services.msc  ->  Just Syslog"
 Write-Host "  Tray   : $trayNote"
 Write-Host "  Remove : $arpNote"

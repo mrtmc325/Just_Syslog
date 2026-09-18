@@ -38,7 +38,7 @@ Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" 
 
 # Remove Start Menu + Desktop shortcuts.
 foreach ($dir in @("$env:PUBLIC\Desktop", [Environment]::GetFolderPath("CommonPrograms"))) {
-    Remove-Item -LiteralPath (Join-Path $dir "Syslog Collector.lnk") -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $dir "Just Syslog.lnk") -Force -ErrorAction SilentlyContinue
 }
 
 # Remove the Programs and Features (Add/Remove Programs) entry.

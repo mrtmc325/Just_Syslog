@@ -6,6 +6,15 @@ All notable changes are documented here. Format loosely follows
 
 ## [1.0.2] — 2026-09-17
 
+### Changed
+- Renamed the product to **Just Syslog** across the UI, installers, menu bar /
+  tray apps, shortcuts, service display name, and the release artifacts
+  (`JustSyslog-*.msi` / `.pkg`, `just-syslog` `.deb` / `.rpm`). The Linux package
+  declares Replaces/Conflicts/Provides on `syslog-collector` so it supersedes the
+  old package on upgrade. Runtime identifiers are unchanged — Windows service
+  `SyslogCollector`, systemd unit `syslog-collector.service`, install paths, and
+  bundle IDs — so existing services and configs keep working.
+
 ### Added
 - Web viewer: **severity summary bar** — per-level counts, click a chip to filter.
 - Web viewer: **source quick-filter** — filter by sender IP (with counts).

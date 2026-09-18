@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in Syslog Collector! This is a small, deliberately lean
+Thanks for your interest in Just Syslog! This is a small, deliberately lean
 project — the best contributions keep it that way.
 
 ## Ground rules

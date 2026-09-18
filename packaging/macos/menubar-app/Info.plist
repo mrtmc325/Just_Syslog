@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Syslog Collector</string>
+    <string>Just Syslog</string>
     <key>CFBundleDisplayName</key>
-    <string>Syslog Collector</string>
+    <string>Just Syslog</string>
     <key>CFBundleIdentifier</key>
     <string>house.conner.syslog-collector.menubar</string>
     <key>CFBundleVersion</key>

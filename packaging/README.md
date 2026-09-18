@@ -25,14 +25,14 @@ Build (needs Rust + Xcode Command Line Tools; `pkgbuild` ships with macOS):
 Install / uninstall:
 
 ```bash
-sudo installer -pkg SyslogCollector-1.0.2-macos.pkg -target /
+sudo installer -pkg JustSyslog-1.0.2-macos.pkg -target /
 # uninstall:
 sudo launchctl bootout system /Library/LaunchDaemons/house.conner.syslog-collector.plist
 launchctl bootout "gui/$(id -u)" /Library/LaunchAgents/house.conner.syslog-collector.menubar.plist 2>/dev/null || true
 sudo rm /Library/LaunchDaemons/house.conner.syslog-collector.plist \
         /Library/LaunchAgents/house.conner.syslog-collector.menubar.plist \
         /usr/local/bin/syslog-collector
-sudo rm -rf "/Applications/Syslog Collector.app"
+sudo rm -rf "/Applications/Just Syslog.app"
 # (logs under /var/log/syslog-collector are left in place)
 ```
 
@@ -41,7 +41,7 @@ The daemon runs as **root** (needed to bind port 514), starts at boot
 
 ### Menu bar app
 
-The pkg also installs **`/Applications/Syslog Collector.app`** — a menu bar
+The pkg also installs **`/Applications/Just Syslog.app`** — a menu bar
 controller (AppKit, no dependencies). It **starts automatically** right after
 install and at every login (via a LaunchAgent), so the icon appears without
 opening it manually. Its menu bar icon shows service status (polled from the
@@ -74,8 +74,8 @@ host Rust/nfpm needed:
 Install:
 
 ```bash
-sudo apt install ./syslog-collector_1.0.2_amd64.deb        # Debian/Ubuntu
-sudo dnf install ./syslog-collector-1.0.2-1.x86_64.rpm     # RHEL/Fedora
+sudo apt install ./just-syslog_1.0.2_amd64.deb        # Debian/Ubuntu
+sudo dnf install ./just-syslog-1.0.2-1.x86_64.rpm     # RHEL/Fedora
 ```
 
 The package creates a dedicated `syslog-collector` system user, enables the
