@@ -8,7 +8,7 @@
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{sync_channel, SyncSender};
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,7 +17,14 @@ use crate::config::Config;
 use crate::store::{self, Cmd};
 
 const INDEX_HTML: &str = include_str!("web/index.html");
+const APP_JS: &str = include_str!("web/app.js");
 const MAX_HEADER: usize = 8 * 1024;
+// Per-line cap so a client streaming bytes with no newline can't grow the read
+// buffer without bound. Applies to the request line and each header line.
+const MAX_LINE: usize = 8 * 1024;
+// Cap concurrent handler threads: loopback, single user, so a small ceiling is
+// plenty and stops a local client flooding connections into unbounded threads.
+const MAX_CONN: usize = 64;
 
 pub fn serve(
     listener: TcpListener,
@@ -25,16 +32,26 @@ pub fn serve(
     cmd_tx: SyncSender<Cmd>,
     running: Arc<AtomicBool>,
 ) {
+    let conns = Arc::new(AtomicUsize::new(0));
     // Poll-accept so the loop notices shutdown promptly (see accept_iter).
     for stream in accept_iter(&listener, &running) {
         if !running.load(Ordering::Relaxed) {
             break;
         }
-        let Ok(stream) = stream else { continue };
+        let Ok(mut stream) = stream else { continue };
+        // Shed load past the concurrency cap instead of spawning unbounded
+        // threads. fetch_add returns the prior count, so this is race-free.
+        if conns.fetch_add(1, Ordering::Relaxed) >= MAX_CONN {
+            conns.fetch_sub(1, Ordering::Relaxed);
+            let _ = respond(&mut stream, 503, "text/plain", b"busy");
+            continue;
+        }
         let cfg = cfg.clone();
         let tx = cmd_tx.clone();
+        let c = conns.clone();
         std::thread::spawn(move || {
             let _ = handle(stream, &cfg, &tx);
+            c.fetch_sub(1, Ordering::Relaxed);
         });
     }
 }
@@ -66,16 +83,17 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
 
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut request_line = String::new();
-    let mut n = reader.read_line(&mut request_line)?;
+    let mut n = read_line_capped(&mut reader, &mut request_line, MAX_LINE)?;
     if n == 0 {
         return Ok(());
     }
-    // Drain headers (bounded), capturing Host for anti-rebinding validation.
+    // Drain headers (bounded), capturing Host (anti-rebinding) and Origin (CSRF).
     let mut header_bytes = request_line.len();
     let mut host = String::new();
+    let mut origin = String::new();
     loop {
         let mut line = String::new();
-        n = reader.read_line(&mut line)?;
+        n = read_line_capped(&mut reader, &mut line, MAX_LINE)?;
         header_bytes += n;
         if n == 0 || line == "\r\n" || line == "\n" || header_bytes > MAX_HEADER {
             break;
@@ -83,6 +101,8 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
         if let Some((k, v)) = line.split_once(':') {
             if k.eq_ignore_ascii_case("host") {
                 host = v.trim().to_string();
+            } else if k.eq_ignore_ascii_case("origin") {
+                origin = v.trim().to_string();
             }
         }
     }
@@ -101,6 +121,9 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
     match (method, path) {
         ("GET", "/") | ("GET", "/index.html") => {
             respond(&mut stream, 200, "text/html; charset=utf-8", INDEX_HTML.as_bytes())
+        }
+        ("GET", "/app.js") => {
+            respond(&mut stream, 200, "application/javascript; charset=utf-8", APP_JS.as_bytes())
         }
         ("GET", "/api/files") => {
             let names = store::list_log_names(&cfg.log_dir);
@@ -152,6 +175,12 @@ fn handle(mut stream: TcpStream, cfg: &Config, tx: &SyncSender<Cmd>) -> std::io:
             respond(&mut stream, 200, "application/json", body.as_bytes())
         }
         ("POST", "/api/cleanup") => {
+            // CSRF defense-in-depth: Host validation blocks DNS rebinding but not
+            // a plain cross-origin bodyless POST (a CORS "simple request"). Reject
+            // when an Origin is present and it isn't our loopback origin.
+            if !origin.is_empty() && !origin_is_local(&origin, cfg.ui_port) {
+                return respond(&mut stream, 403, "text/plain", b"forbidden origin");
+            }
             let (r_tx, r_rx) = sync_channel(1);
             let body = if tx.send(Cmd::Cleanup(r_tx)).is_ok() {
                 match r_rx.recv_timeout(Duration::from_secs(30)) {
@@ -177,6 +206,7 @@ fn respond(stream: &mut TcpStream, code: u16, ctype: &str, body: &[u8]) -> std::
         403 => "Forbidden",
         404 => "Not Found",
         405 => "Method Not Allowed",
+        503 => "Service Unavailable",
         _ => "OK",
     };
     // Loopback single-user UI: no auth, but lock the browser down defensively.
@@ -185,7 +215,7 @@ fn respond(stream: &mut TcpStream, code: u16, ctype: &str, body: &[u8]) -> std::
          Content-Type: {ctype}\r\n\
          Content-Length: {}\r\n\
          X-Content-Type-Options: nosniff\r\n\
-         Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'\r\n\
+         Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'\r\n\
          Cache-Control: no-store\r\n\
          Connection: close\r\n\r\n",
         body.len()
@@ -193,6 +223,43 @@ fn respond(stream: &mut TcpStream, code: u16, ctype: &str, body: &[u8]) -> std::
     stream.write_all(head.as_bytes())?;
     stream.write_all(body)?;
     stream.flush()
+}
+
+/// Read one line (through '\n') without buffering more than `max` bytes, so a
+/// client that streams data with no newline cannot grow the buffer unbounded.
+/// Returns an error if the cap is hit before a newline.
+fn read_line_capped<R: BufRead>(r: &mut R, buf: &mut String, max: usize) -> std::io::Result<usize> {
+    let mut line = Vec::new();
+    let mut byte = [0u8; 1];
+    loop {
+        match r.read(&mut byte)? {
+            0 => break, // EOF
+            _ => {
+                line.push(byte[0]);
+                if byte[0] == b'\n' {
+                    break;
+                }
+                if line.len() >= max {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "request/header line too long",
+                    ));
+                }
+            }
+        }
+    }
+    buf.push_str(&String::from_utf8_lossy(&line));
+    Ok(line.len())
+}
+
+/// True if an `Origin` header value (`scheme://host[:port]`) is this loopback
+/// server. Strips the scheme and reuses the Host check.
+fn origin_is_local(origin: &str, port: u16) -> bool {
+    let h = origin
+        .strip_prefix("http://")
+        .or_else(|| origin.strip_prefix("https://"))
+        .unwrap_or(origin);
+    host_is_local(h, port)
 }
 
 /// True if `host` (a Host header value) names this loopback server. Bare host
@@ -275,5 +342,30 @@ mod tests {
         assert!(!host_is_local("attacker.com:8514", 8514)); // DNS rebinding
         assert!(!host_is_local("127.0.0.1:9999", 8514));     // wrong port
         assert!(!host_is_local("evil.localhost", 8514));
+    }
+
+    #[test]
+    fn origin_validation() {
+        assert!(origin_is_local("http://127.0.0.1:8514", 8514));
+        assert!(origin_is_local("http://localhost:8514", 8514));
+        assert!(!origin_is_local("http://evil.example:8514", 8514)); // cross-origin CSRF
+        assert!(!origin_is_local("https://127.0.0.1:9999", 8514));   // wrong port
+        assert!(!origin_is_local("null", 8514));                     // opaque origin
+    }
+
+    #[test]
+    fn capped_line_reader() {
+        use std::io::BufReader;
+        // A newline-terminated line within the cap reads fine.
+        let mut r = BufReader::new(&b"GET / HTTP/1.1\r\nrest"[..]);
+        let mut s = String::new();
+        assert!(read_line_capped(&mut r, &mut s, 64).is_ok());
+        assert_eq!(s, "GET / HTTP/1.1\r\n");
+        // A line longer than the cap with no newline is rejected, not buffered.
+        let big = vec![b'a'; 100];
+        let mut r2 = BufReader::new(&big[..]);
+        let mut s2 = String::new();
+        assert!(read_line_capped(&mut r2, &mut s2, 16).is_err());
+        assert!(s2.len() <= 16);
     }
 }

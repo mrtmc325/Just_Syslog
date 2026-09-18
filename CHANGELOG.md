@@ -14,6 +14,15 @@ All notable changes are documented here. Format loosely follows
   bounds the index, and the receive loop wraps parsing in `catch_unwind` so any
   future parser fault drops one datagram instead of the receiver. Regression test
   added.
+- Web viewer server hardening (from the security review): request and header
+  lines are read with a byte cap (no unbounded buffering), concurrent viewer
+  connections are capped, the state-changing `POST /api/cleanup` now rejects
+  cross-origin requests (CSRF defense-in-depth on top of the existing Host/DNS-
+  rebinding check), and the CSP is tightened — `script-src 'self'` (the viewer
+  JS moved to a served `app.js`, no inline script) plus `object-src`/`base-uri`/
+  `frame-ancestors 'none'`.
+- Web viewer: CSV export now neutralizes spreadsheet formula injection (a cell of
+  attacker-controlled syslog starting with `=`/`+`/`-`/`@` is quoted as text).
 
 ### Fixed
 - Installers now stop a running instance **before** upgrading, so an upgrade
