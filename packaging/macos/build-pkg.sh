@@ -36,7 +36,7 @@ install -m 0644 packaging/launchd/house.conner.syslog-collector.menubar.plist "$
 install -m 0644 packaging/config.sample.txt "$STAGE/etc/syslog-collector/config.txt"
 cp -R "$APPDIR/Just Syslog.app" "$STAGE/Applications/"
 
-chmod +x packaging/macos/scripts/postinstall
+chmod +x packaging/macos/scripts/preinstall packaging/macos/scripts/postinstall
 
 # Force the app to install at /Applications rather than being relocated to any
 # existing copy the installer discovers (pkgbuild defaults bundles to relocatable).

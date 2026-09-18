@@ -1,0 +1,31 @@
+#!/bin/sh
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
+#
+# pkg preinstall: stop any running instance BEFORE the payload is replaced, so
+# an upgrade never races a live process holding UDP/514, a busy binary inode, or
+# a stale menu bar icon. postinstall starts everything again from the new files.
+# Every step is best-effort (no existing instance is fine) and never aborts the
+# install.
+set -e
+
+DAEMON=house.conner.syslog-collector
+AGENT=house.conner.syslog-collector.menubar
+
+# Stop the LaunchDaemon first. It sets KeepAlive, so bootout (which removes the
+# job) is required — a bare kill would just be respawned.
+launchctl bootout "system/$DAEMON" 2>/dev/null || true
+
+# Stop the per-user menu bar LaunchAgent for the console user, if any.
+UID_CONSOLE=$(stat -f %u /dev/console 2>/dev/null || echo 0)
+if [ "$UID_CONSOLE" != "0" ]; then
+    launchctl bootout "gui/$UID_CONSOLE/$AGENT" 2>/dev/null || true
+fi
+
+# Hard-kill anything still alive: a manually launched app, a slow bootout, or a
+# pre-rebrand "Syslog Collector.app" instance. Paths are specific so the daemon
+# and the menu bar app are matched independently (and nothing else is).
+pkill -f '/usr/local/bin/syslog-collector' 2>/dev/null || true
+pkill -f 'Contents/MacOS/SyslogCollector' 2>/dev/null || true
+
+exit 0

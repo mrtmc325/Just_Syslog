@@ -6,6 +6,18 @@ All notable changes are documented here. Format loosely follows
 
 ## [1.0.2] — 2026-09-17
 
+### Fixed
+- Installers now stop a running instance **before** upgrading, so an upgrade
+  never races a live process holding UDP/514 or leaves a stale tray/menu bar
+  icon:
+  - **macOS:** a new pkg `preinstall` boots out the LaunchDaemon and menu bar
+    LaunchAgent and hard-kills any lingering daemon or menu bar process
+    (including a pre-rebrand `Syslog Collector.app`).
+  - **Windows:** the MSI stops the service synchronously (`Stop-Service`, and
+    `ServiceControl` now waits) and kills the tray controller process before the
+    old payload is removed (removal is scheduled `afterInstallInitialize` so this
+    runs elevated first); `install.ps1` kills the tray before overwriting files.
+
 ### Changed
 - Renamed the product to **Just Syslog** across the UI, installers, menu bar /
   tray apps, shortcuts, service display name, and the release artifacts
