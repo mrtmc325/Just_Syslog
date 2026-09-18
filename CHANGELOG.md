@@ -6,6 +6,13 @@ All notable changes are documented here. Format loosely follows
 
 ## [1.0.2] — 2026-09-17
 
+### Fixed
+- macOS installer now stops a running instance **before** upgrading: a new pkg
+  `preinstall` boots out the LaunchDaemon and menu bar LaunchAgent and hard-kills
+  any lingering daemon or menu bar process (including a pre-rebrand
+  `Syslog Collector.app`), so upgrades no longer race a live process holding
+  UDP/514 or leave a stale menu bar icon.
+
 ### Changed
 - Renamed the product to **Just Syslog** across the UI, installers, menu bar /
   tray apps, shortcuts, service display name, and the release artifacts
