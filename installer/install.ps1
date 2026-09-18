@@ -7,7 +7,7 @@
 # Run from an elevated PowerShell:  powershell -ExecutionPolicy Bypass -File install.ps1
 [CmdletBinding()]
 param(
-    [string]$LogDir = "C:\SyslogCollector\logs",
+    [string]$LogDir = "$env:ProgramData\SyslogCollector\logs",
     [int]$UdpPort = 514,
     [int]$UiPort  = 8514,
     [string]$BinaryPath = ""   # defaults to dist\x64 (falls back to dist\x86)
@@ -47,7 +47,7 @@ if (Get-Service -Name "SyslogCollector" -ErrorAction SilentlyContinue) {
 # Stop a running tray controller too, so its files aren't locked during copy
 # (parity with the macOS installer and uninstall.ps1).
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like "*SyslogTray.ps1*" } |
+    Where-Object { $_.CommandLine -like "*\tray\SyslogTray.ps1*" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Copy-Item -Path $BinaryPath -Destination $destExe -Force
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null

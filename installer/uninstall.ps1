@@ -31,7 +31,7 @@ if (Test-Path $destExe) {
 
 # Stop the tray app and remove its login entry.
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like "*SyslogTray.ps1*" } |
+    Where-Object { $_.CommandLine -like "*\tray\SyslogTray.ps1*" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
     -Name "SyslogCollectorTray" -ErrorAction SilentlyContinue

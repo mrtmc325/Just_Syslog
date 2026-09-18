@@ -13,7 +13,7 @@ if (-not $SkipExeBuild) {
     Write-Host "== Building syslogd.exe (x64 release) =="
     rustup target add x86_64-pc-windows-msvc | Out-Null
     Push-Location $root
-    try { cargo build --release --target x86_64-pc-windows-msvc } finally { Pop-Location }
+    try { cargo build --release --locked --target x86_64-pc-windows-msvc } finally { Pop-Location }
 }
 if (-not (Test-Path $exe)) { throw "syslogd.exe not found at $exe - build it first (drop -SkipExeBuild)." }
 

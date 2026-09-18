@@ -52,6 +52,19 @@ All notable changes are documented here. Format loosely follows
   dependency-advisory scan (`cargo audit`, also run weekly to catch newly
   disclosed advisories), and a secret scan (`gitleaks`). Advisory scan is clean
   as of 2026-09-18 (7 dependencies, no advisories).
+- **Windows:** the installer's default log directory moved from the drive root
+  `C:\SyslogCollector\logs` — which a standard user can pre-create and hijack (a
+  local privilege-escalation risk for the SYSTEM service, and world-readable
+  logs) — to `%ProgramData%\SyslogCollector\logs`, matching the binary's own
+  default. Existing installs keep their configured path.
+- **Windows tray:** closed an elevated-command-injection path — config values are
+  validated at the boundary (log dir must be a local path, ports 1–65535, sizes
+  positive) and single quotes are escaped before any value reaches the
+  UAC-elevated command; `Clear Logs` fails closed on an invalid saved path.
+- **Windows:** the tray process-kill match (MSI custom action + install/uninstall
+  scripts) is narrowed to the installed `\tray\SyslogTray.ps1` path so it can't
+  terminate an unrelated PowerShell process.
+- **Windows build:** `cargo build --locked` for reproducible builds.
 
 ### Fixed
 - Installers now stop a running instance **before** upgrading, so an upgrade
