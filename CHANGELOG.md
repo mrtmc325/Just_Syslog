@@ -6,6 +6,15 @@ All notable changes are documented here. Format loosely follows
 
 ## [1.0.2] — 2026-09-17
 
+### Security
+- Fixed an unauthenticated remote denial-of-service: a single crafted RFC 5424
+  datagram (a structured-data block ending in a lone `\`) drove the parser's
+  skip index past the buffer and panicked, killing the UDP receiver thread while
+  the process kept running — silently stopping all collection. The parser now
+  bounds the index, and the receive loop wraps parsing in `catch_unwind` so any
+  future parser fault drops one datagram instead of the receiver. Regression test
+  added.
+
 ### Fixed
 - Installers now stop a running instance **before** upgrading, so an upgrade
   never races a live process holding UDP/514 or leaves a stale tray/menu bar

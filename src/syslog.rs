@@ -125,7 +125,9 @@ impl Message {
                 let mut depth = 0;
                 while i < b.len() {
                     match b[i] {
-                        b'\\' => i += 1,               // escaped char inside SD
+                        // Escaped char inside SD: skip it — but only when one
+                        // follows, so a trailing '\' can't step i past the end.
+                        b'\\' if i + 1 < b.len() => i += 1,
                         b'[' => depth += 1,
                         b']' => { depth -= 1; if depth == 0 { i += 1; break; } }
                         _ => {}
@@ -133,7 +135,8 @@ impl Message {
                     i += 1;
                 }
             }
-            tail[i..].trim_start()
+            // On malformed SD, i can land one past the end; clamp before slicing.
+            tail[i.min(b.len())..].trim_start()
         } else {
             tail
         };
@@ -326,6 +329,22 @@ mod tests {
         );
         assert!(m.raw.contains('\u{20ac}'));
         assert!(!m.message.is_empty()); // parsed as free-text, not crashed
+    }
+
+    #[test]
+    fn malformed_structured_data_does_not_panic() {
+        // Regression: a 5424 SD block ending in a lone trailing '\' used to drive
+        // the skip index past the slice end and panic — one UDP packet could kill
+        // the receiver. All of these must parse without panicking.
+        for bytes in [
+            &b"<13>1 - - - - - [\\"[..],     // trailing backslash right after '['
+            &b"<13>1 - - - - - [abc"[..],    // unterminated SD block
+            &b"<13>1 - - - - - [a\\"[..],    // backslash at end inside the block
+            &b"<13>1 - - - - - [x][y\\"[..], // second block ends in a backslash
+        ] {
+            let m = Message::parse(bytes, "10.0.0.8", "T");
+            assert!(!m.raw.is_empty()); // parsed, not crashed
+        }
     }
 
     #[test]

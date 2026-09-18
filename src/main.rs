@@ -181,11 +181,20 @@ fn udp_loop(sock: UdpSocket, tx: std::sync::mpsc::SyncSender<Cmd>, running: Arc<
     while running.load(Ordering::Relaxed) {
         match sock.recv_from(&mut buf) {
             Ok((n, addr)) if n > 0 => {
-                let m = Message::parse(&buf[..n], &addr.ip().to_string(), &now_rfc3339());
-                // Drop on overflow rather than block the receiver under flood;
-                // the queue is bounded (10k). A disk-backed spool would only help
-                // a site that sustains a >10k message burst faster than fsync.
-                let _ = tx.try_send(Cmd::Msg(m));
+                let ip = addr.ip().to_string();
+                let recv = now_rfc3339();
+                // A parser panic on hostile input must never kill the receiver
+                // thread (that would silently stop all collection). Catch it,
+                // drop the one datagram, keep receiving.
+                let parsed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    Message::parse(&buf[..n], &ip, &recv)
+                }));
+                match parsed {
+                    // Drop on overflow rather than block the receiver under flood;
+                    // the queue is bounded (10k), so a burst sheds load here.
+                    Ok(m) => { let _ = tx.try_send(Cmd::Msg(m)); }
+                    Err(_) => eprintln!("dropped datagram from {ip}: parser panicked"),
+                }
             }
             Ok(_) => {}
             Err(ref e) if is_timeout(e) => {} // expected: 1s poll to check `running`
