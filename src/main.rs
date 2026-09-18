@@ -126,6 +126,32 @@ fn cfg_with_overrides(args: &[String]) -> Config {
 /// Wire up store + UDP receiver + HTTP viewer and block until `running` clears.
 /// Called by both `run` (foreground) and the Windows service.
 pub fn run_collector(cfg: Config, running: Arc<AtomicBool>) {
+    // Bind sockets FIRST (UDP/514 is privileged on Unix), then drop root, then
+    // start the workers — so nothing runs as root beyond the two binds.
+    let udp_sock = match UdpSocket::bind(("0.0.0.0", cfg.udp_port)) {
+        Ok(sock) => {
+            sock.set_read_timeout(Some(Duration::from_secs(1))).ok();
+            Some(sock)
+        }
+        Err(e) => {
+            eprintln!("[udp] cannot bind 0.0.0.0:{} ({e}). UI still available.", cfg.udp_port);
+            None
+        }
+    };
+    let tcp_listener = match TcpListener::bind(("127.0.0.1", cfg.ui_port)) {
+        Ok(listener) => Some(listener),
+        Err(e) => {
+            eprintln!("[ui] cannot bind 127.0.0.1:{} ({e}).", cfg.ui_port);
+            None
+        }
+    };
+
+    // Shed root now that the privileged port is bound. No-op unless we are root,
+    // so foreground `run` and the Linux systemd unit (already a dedicated user)
+    // are unaffected; the macOS root LaunchDaemon drops here.
+    #[cfg(unix)]
+    drop_privileges(&cfg.log_dir);
+
     let (cmd_tx, cmd_rx) = sync_channel::<Cmd>(CHANNEL_CAP);
 
     // Store owner thread.
@@ -133,32 +159,19 @@ pub fn run_collector(cfg: Config, running: Arc<AtomicBool>) {
     let store_h = thread::spawn(move || store::run(dir, mfm, rd, mtm, cmd_rx, 600));
 
     // UDP syslog receiver (all interfaces, through the firewall).
-    let udp_h = match UdpSocket::bind(("0.0.0.0", cfg.udp_port)) {
-        Ok(sock) => {
-            sock.set_read_timeout(Some(Duration::from_secs(1))).ok();
-            let tx = cmd_tx.clone();
-            let run = running.clone();
-            Some(thread::spawn(move || udp_loop(sock, tx, run)))
-        }
-        Err(e) => {
-            eprintln!("[udp] cannot bind 0.0.0.0:{} ({e}). UI still available.", cfg.udp_port);
-            None
-        }
-    };
+    let udp_h = udp_sock.map(|sock| {
+        let tx = cmd_tx.clone();
+        let run = running.clone();
+        thread::spawn(move || udp_loop(sock, tx, run))
+    });
 
     // Local web viewer (loopback only).
-    let http_h = match TcpListener::bind(("127.0.0.1", cfg.ui_port)) {
-        Ok(listener) => {
-            let tx = cmd_tx.clone();
-            let run = running.clone();
-            let c = cfg.clone();
-            Some(thread::spawn(move || http::serve(listener, c, tx, run)))
-        }
-        Err(e) => {
-            eprintln!("[ui] cannot bind 127.0.0.1:{} ({e}).", cfg.ui_port);
-            None
-        }
-    };
+    let http_h = tcp_listener.map(|listener| {
+        let tx = cmd_tx.clone();
+        let run = running.clone();
+        let c = cfg.clone();
+        thread::spawn(move || http::serve(listener, c, tx, run))
+    });
 
     // Block until stop is requested.
     while running.load(Ordering::Relaxed) {
@@ -174,6 +187,60 @@ pub fn run_collector(cfg: Config, running: Arc<AtomicBool>) {
     }
     drop(cmd_tx); // closes the store channel so it can finish
     let _ = store_h.join();
+}
+
+/// Drop root to a dedicated service account after the privileged UDP port is
+/// bound. No-op unless running as root, so foreground `run` and the Linux
+/// systemd unit (already a dedicated user) are unaffected — only the macOS root
+/// LaunchDaemon actually drops. Fails OPEN to root when the account or a chowned
+/// log dir is missing (so collection keeps working on a partial install), but
+/// fails CLOSED (exits) if a drop leaves root regainable.
+#[cfg(unix)]
+fn drop_privileges(log_dir: &std::path::Path) {
+    use std::os::unix::fs::MetadataExt;
+
+    if unsafe { libc::geteuid() } != 0 {
+        return; // not root: nothing to drop
+    }
+    let user = if cfg!(target_os = "macos") { "_syslogcollector" } else { "syslog-collector" };
+    let Ok(cuser) = std::ffi::CString::new(user) else { return };
+    let pw = unsafe { libc::getpwnam(cuser.as_ptr()) };
+    if pw.is_null() {
+        eprintln!("[priv] service account '{user}' not found; staying root");
+        return;
+    }
+    let (uid, gid) = unsafe { ((*pw).pw_uid, (*pw).pw_gid) };
+
+    // Self-gate: only drop when the installer already chowned the log dir to the
+    // account. Otherwise the dropped process couldn't write logs, so staying root
+    // is the safer, still-functional choice.
+    match std::fs::metadata(log_dir) {
+        Ok(m) if m.uid() == uid => {}
+        _ => {
+            eprintln!("[priv] {} not owned by '{user}'; staying root", log_dir.display());
+            return;
+        }
+    }
+
+    // Order matters: set group + supplementary groups BEFORE uid (once root is
+    // gone, setgid/initgroups would fail).
+    unsafe {
+        if libc::setgid(gid) != 0 {
+            eprintln!("[priv] setgid failed; staying root");
+            return;
+        }
+        libc::initgroups(cuser.as_ptr(), gid as _);
+        if libc::setuid(uid) != 0 {
+            eprintln!("[priv] setuid failed; staying root");
+            return;
+        }
+    }
+    // A correct drop must make root unregainable; if not, fail closed.
+    if unsafe { libc::seteuid(0) } == 0 {
+        eprintln!("[priv] FATAL: root regainable after drop; exiting");
+        std::process::exit(1);
+    }
+    eprintln!("[priv] dropped privileges to '{user}' (uid {uid})");
 }
 
 fn udp_loop(sock: UdpSocket, tx: std::sync::mpsc::SyncSender<Cmd>, running: Arc<AtomicBool>) {
@@ -208,4 +275,14 @@ fn is_timeout(e: &std::io::Error) -> bool {
         e.kind(),
         std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
     )
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    #[test]
+    fn drop_privileges_noop_when_not_root() {
+        // As a normal user (or as root without the service account / a matching
+        // log-dir owner) this must return without dropping or exiting.
+        super::drop_privileges(std::path::Path::new("/nonexistent-just-syslog"));
+    }
 }

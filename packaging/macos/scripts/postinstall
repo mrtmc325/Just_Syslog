@@ -5,8 +5,39 @@
 set -e
 
 mkdir -p /var/log/syslog-collector
-chmod 0755 /var/log/syslog-collector
+# 0750 (not world-readable): collected syslog may contain sensitive data, and the
+# root daemon writes files here. Others can't traverse the dir to read them.
+chmod 0750 /var/log/syslog-collector
 mkdir -p /etc/syslog-collector
+
+# Dedicated non-root account so the daemon can drop root after binding UDP/514
+# (macOS has no useradd — create a hidden role account via dscl). Best-effort:
+# if this fails the daemon simply stays root (it self-gates on the account +
+# log-dir ownership), so a partial setup never breaks collection.
+SVC_USER="_syslogcollector"
+create_service_account() {
+    dscl . -read "/Users/$SVC_USER" >/dev/null 2>&1 && return 0
+    # First free id in the macOS system range (200-400).
+    nid=200
+    while dscl . -list /Users UniqueID | awk '{print $2}' | grep -qx "$nid" \
+       || dscl . -list /Groups PrimaryGroupID | awk '{print $2}' | grep -qx "$nid"; do
+        nid=$((nid + 1))
+    done
+    dscl . -create "/Groups/$SVC_USER"
+    dscl . -create "/Groups/$SVC_USER" PrimaryGroupID "$nid"
+    dscl . -create "/Groups/$SVC_USER" RealName "Just Syslog service"
+    dscl . -create "/Users/$SVC_USER"
+    dscl . -create "/Users/$SVC_USER" UniqueID "$nid"
+    dscl . -create "/Users/$SVC_USER" PrimaryGroupID "$nid"
+    dscl . -create "/Users/$SVC_USER" RealName "Just Syslog service"
+    dscl . -create "/Users/$SVC_USER" UserShell /usr/bin/false
+    dscl . -create "/Users/$SVC_USER" NFSHomeDirectory /var/empty
+    dscl . -create "/Users/$SVC_USER" Password "*"
+    dscl . -create "/Users/$SVC_USER" IsHidden 1
+}
+create_service_account 2>/dev/null || true
+# Give the (dropped) daemon ownership of its log dir.
+chown -R "$SVC_USER:$SVC_USER" /var/log/syslog-collector 2>/dev/null || true
 
 PLIST=/Library/LaunchDaemons/house.conner.syslog-collector.plist
 # Reload cleanly if it was already loaded (upgrade).

@@ -17,18 +17,20 @@ esac
 
 command -v docker >/dev/null 2>&1 || { echo "docker not found"; exit 1; }
 
+# Pinned builder image (specific rustc minor, not the floating rust:1 tag) and a
+# pinned, checksum-verified nfpm — reproducible builds, no unverified downloads.
 docker run --rm --platform "$PLATFORM" -e ARCH="$ARCH" \
-    -v "$ROOT":/work -w /work rust:1-bookworm bash -c '
+    -v "$ROOT":/work -w /work rust:1.94-bookworm bash -c '
         set -e
+        NFPM_VERSION=2.47.0
         case "$(uname -m)" in
-            x86_64)  NFPM_ARCH=x86_64 ;;
-            aarch64) NFPM_ARCH=arm64 ;;
+            x86_64)  NFPM_ARCH=x86_64; NFPM_SHA=0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783 ;;
+            aarch64) NFPM_ARCH=arm64;  NFPM_SHA=1c0f5f2999b9a974bfb04fdb0cc3306096de530ac5dbb25d739cc5f5219c919c ;;
             *) echo "unexpected arch $(uname -m)"; exit 1 ;;
         esac
-        curl -sSL -o /tmp/nfpm-latest.json https://api.github.com/repos/goreleaser/nfpm/releases/latest
-        VER=$(grep -m1 "\"tag_name\"" /tmp/nfpm-latest.json | cut -d"\"" -f4)
-        echo "nfpm $VER ($NFPM_ARCH)"
-        curl -sSL -o /tmp/nfpm.tgz "https://github.com/goreleaser/nfpm/releases/download/${VER}/nfpm_${VER#v}_Linux_${NFPM_ARCH}.tar.gz"
+        echo "nfpm $NFPM_VERSION ($NFPM_ARCH)"
+        curl -sSL -o /tmp/nfpm.tgz "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_${NFPM_ARCH}.tar.gz"
+        echo "${NFPM_SHA}  /tmp/nfpm.tgz" | sha256sum -c -
         tar -xzf /tmp/nfpm.tgz -C /usr/local/bin nfpm
         sh packaging/linux/build-linux-packages.sh
     '

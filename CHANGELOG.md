@@ -23,6 +23,31 @@ All notable changes are documented here. Format loosely follows
   `frame-ancestors 'none'`.
 - Web viewer: CSV export now neutralizes spreadsheet formula injection (a cell of
   attacker-controlled syslog starting with `=`/`+`/`-`/`@` is quoted as text).
+- **macOS menu bar app:** closed a root command-injection path — config values
+  (log dir, ports) are now validated at the boundary and shell-quoted before they
+  reach the privileged `osascript` command, so a crafted `log_dir` can no longer
+  inject a root shell command.
+- **macOS:** the collected-logs directory is created `0750` (was `0755`) so local
+  users can't read captured syslog; the pkg `preinstall` process-kill patterns are
+  anchored to the start of the command line so they can't match an unrelated
+  process.
+- **macOS privilege drop:** the daemon now binds UDP/514 as root and then drops to
+  a dedicated `_syslogcollector` account (created by the installer), so the
+  network-facing parser no longer runs as root. It self-gates (stays root, still
+  collecting, if the account/log-dir aren't set up) and fails closed if a drop
+  leaves root regainable. Adds one dependency, `libc = "=0.2.189"` (Unix only;
+  advisory-clean 2026-09-18); SBOM regenerated. Linux already runs as a dedicated
+  user via systemd, so it's unaffected.
+- **Linux:** the systemd unit adds substantial sandboxing (`ProtectSystem=full`,
+  `SystemCallFilter=@system-service`, `RestrictAddressFamilies`, `PrivateDevices`,
+  `MemoryDenyWriteExecute`, `UMask=0027`, and more), keeping a custom `log_dir`
+  writable.
+- **Linux:** fixed the RPM upgrade path — `preremove` now guards on `$1` so an
+  `rpm`/`dnf` upgrade no longer stops and disables the service it just started.
+- **Build supply chain:** the Linux Docker build now pins the builder image
+  (`rust:1.94-bookworm`) and a specific `nfpm` version, and verifies the nfpm
+  download against a known SHA-256 before running it. `nfpm` package license
+  metadata corrected to MIT.
 
 ### Fixed
 - Installers now stop a running instance **before** upgrading, so an upgrade
