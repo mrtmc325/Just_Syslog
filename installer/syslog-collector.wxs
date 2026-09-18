@@ -32,9 +32,14 @@
                   DowngradeErrorMessage="A newer version of Just Syslog is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
-    <!-- Log directory: default here, override at install time with:
-         msiexec /i JustSyslog-1.0.2-x64.msi LOGDIR="D:\SyslogLogs" -->
-    <Property Id="LOGDIR" Value="C:\SyslogCollector\logs" />
+    <!-- Log directory. Default is %ProgramData%\SyslogCollector\logs — a trusted,
+         non-squattable location (matches the binary's own default), unlike a
+         drive-root folder which a standard user can pre-create and hijack. It is
+         computed after CostFinalize so [CommonAppDataFolder] resolves. Override at
+         install time: msiexec /i JustSyslog-1.0.2-x64.msi LOGDIR="D:\SyslogLogs" -->
+    <Property Id="LOGDIR" />
+    <SetProperty Id="LOGDIR" Value="[CommonAppDataFolder]SyslogCollector\logs"
+                 After="CostFinalize" Sequence="both" Condition="NOT LOGDIR" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="SyslogCollector">
@@ -142,7 +147,7 @@
          killed with Invoke-CimMethod Terminate (no script blocks, no $_). -->
     <CustomAction Id="StopSyslogInstance"
                   Directory="INSTALLFOLDER"
-                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;Stop-Service -Name SyslogCollector -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process | Where-Object Name -eq 'powershell.exe' | Where-Object CommandLine -like '*SyslogTray.ps1*' | Invoke-CimMethod -MethodName Terminate -ErrorAction SilentlyContinue&quot;"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;Stop-Service -Name SyslogCollector -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process | Where-Object Name -eq 'powershell.exe' | Where-Object CommandLine -like '*\tray\SyslogTray.ps1*' | Invoke-CimMethod -MethodName Terminate -ErrorAction SilentlyContinue&quot;"
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />

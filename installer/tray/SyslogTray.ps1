@@ -26,7 +26,7 @@ $FieldDefs = [ordered]@{
 
 function Get-Config {
     $c = [ordered]@{
-        log_dir = "C:\SyslogCollector\logs"; udp_port = "514"; ui_port = "8514"
+        log_dir = "$env:ProgramData\SyslogCollector\logs"; udp_port = "514"; ui_port = "8514"
         max_file_mb = "100"; retention_days = "30"; max_total_mb = "2048"
     }
     if (Test-Path $ConfigPath) {
@@ -39,6 +39,29 @@ function Get-Config {
         }
     }
     return $c
+}
+
+# Validate config values at the trust boundary. These are written to config and
+# interpolated into an elevated command, so they must be strict: log_dir must be
+# a local drive path (no UNC -> no NTLM coercion, no quotes -> no injection),
+# ports 1-65535, sizes positive. Returns an error string, or $null if valid.
+function Test-ConfigValues($cfg) {
+    if ([string]$cfg['log_dir'] -notmatch '^[A-Za-z]:\\[A-Za-z0-9 ._\\-]*$') {
+        return "Log directory must be a local path like C:\SyslogCollector\logs (letters, digits, space, and . _ - \ only)."
+    }
+    foreach ($k in @('udp_port', 'ui_port')) {
+        $n = 0
+        if (-not [int]::TryParse([string]$cfg[$k], [ref]$n) -or $n -lt 1 -or $n -gt 65535) {
+            return "$k must be a whole number from 1 to 65535."
+        }
+    }
+    foreach ($k in @('max_file_mb', 'retention_days', 'max_total_mb')) {
+        $n = 0
+        if (-not [int]::TryParse([string]$cfg[$k], [ref]$n) -or $n -lt 1) {
+            return "$k must be a positive whole number."
+        }
+    }
+    return $null
 }
 
 function Get-Status {
@@ -70,11 +93,16 @@ function Stop-Svc  { try { Start-Process sc.exe -ArgumentList "stop",  $ServiceN
 
 function Clear-Logs {
     $cfg = Get-Config
+    # Fail closed if the saved log dir is not a valid local path — never build an
+    # elevated command from an unvalidated value.
+    $err = Test-ConfigValues $cfg
+    if ($err) { [System.Windows.Forms.MessageBox]::Show("Cannot clear logs: $err", "Clear Logs", "OK", "Warning") | Out-Null; return }
     $ans = [System.Windows.Forms.MessageBox]::Show(
         "Delete every .jsonl file in $($cfg.log_dir) and restart the collector?",
         "Clear Logs", "YesNo", "Warning")
     if ($ans -ne "Yes") { return }
-    Invoke-Elevated "Remove-Item -LiteralPath '$($cfg.log_dir)\*.jsonl' -Force -ErrorAction SilentlyContinue; Restart-Service -Name '$ServiceName' -ErrorAction SilentlyContinue"
+    $eDir = [string]$cfg.log_dir -replace "'", "''"   # escape for the single-quoted literal
+    Invoke-Elevated "Remove-Item -LiteralPath '$eDir\*.jsonl' -Force -ErrorAction SilentlyContinue; Restart-Service -Name '$ServiceName' -ErrorAction SilentlyContinue"
     Update-Status
 }
 
@@ -114,12 +142,20 @@ function Show-Config {
 
     if ($form.ShowDialog() -ne "OK") { return }
 
+    # Validate at the boundary before writing anything or running as admin.
+    $new = [ordered]@{}
+    foreach ($key in $FieldDefs.Keys) { $new[$key] = $boxes[$key].Text.Trim() }
+    $err = Test-ConfigValues $new
+    if ($err) { [System.Windows.Forms.MessageBox]::Show($err, "Invalid configuration", "OK", "Warning") | Out-Null; return }
+
     $content = "# Just Syslog configuration (Windows)"
-    foreach ($key in $FieldDefs.Keys) { $content += "`n$key=$($boxes[$key].Text.Trim())" }
+    foreach ($key in $FieldDefs.Keys) { $content += "`n$key=$($new[$key])" }
     $tmp = Join-Path $env:TEMP ("syslog-cfg-" + [guid]::NewGuid().ToString() + ".txt")
     Set-Content -LiteralPath $tmp -Value $content -Encoding ASCII
     $dir = Split-Path $ConfigPath
-    Invoke-Elevated "New-Item -ItemType Directory -Force -Path '$dir' | Out-Null; Copy-Item -LiteralPath '$tmp' -Destination '$ConfigPath' -Force; Remove-Item -LiteralPath '$tmp' -Force; Restart-Service -Name '$ServiceName' -ErrorAction SilentlyContinue"
+    # Escape single quotes for the single-quoted literals in the elevated command.
+    $eDir = $dir -replace "'", "''"; $eTmp = $tmp -replace "'", "''"; $eCfg = $ConfigPath -replace "'", "''"
+    Invoke-Elevated "New-Item -ItemType Directory -Force -Path '$eDir' | Out-Null; Copy-Item -LiteralPath '$eTmp' -Destination '$eCfg' -Force; Remove-Item -LiteralPath '$eTmp' -Force; Restart-Service -Name '$ServiceName' -ErrorAction SilentlyContinue"
     Update-Status
 }
 
