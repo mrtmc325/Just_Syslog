@@ -1,4 +1,4 @@
-# Syslog Collector
+# Just Syslog
 
 **Syslog on the fly.** When the network or a system is going sideways, stand this
 up on any host, point the failing gear at it (UDP/514), and read the logs

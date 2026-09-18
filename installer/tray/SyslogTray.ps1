@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Tristan Conner <tristan@conner.house>
 # SPDX-License-Identifier: MIT
 #
-# System tray controller for the Syslog Collector service (Windows) - parity
+# System tray controller for the Just Syslog service (Windows) - parity
 # with the macOS menu bar app. Shows service status (Get-Service + the loopback
 # HTTP API) and controls the service via UAC-elevated actions. WinForms only,
 # no third-party dependencies. Launch hidden via SyslogTray.vbs.
@@ -81,7 +81,7 @@ function Clear-Logs {
 function Show-Config {
     $cfg = Get-Config
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Syslog Collector Configuration"
+    $form.Text = "Just Syslog Configuration"
     $form.FormBorderStyle = "FixedDialog"; $form.StartPosition = "CenterScreen"
     $form.MaximizeBox = $false; $form.MinimizeBox = $false
     $form.ClientSize = New-Object System.Drawing.Size(430, 250)
@@ -114,7 +114,7 @@ function Show-Config {
 
     if ($form.ShowDialog() -ne "OK") { return }
 
-    $content = "# Syslog Collector configuration (Windows)"
+    $content = "# Just Syslog configuration (Windows)"
     foreach ($key in $FieldDefs.Keys) { $content += "`n$key=$($boxes[$key].Text.Trim())" }
     $tmp = Join-Path $env:TEMP ("syslog-cfg-" + [guid]::NewGuid().ToString() + ".txt")
     Set-Content -LiteralPath $tmp -Value $content -Encoding ASCII
@@ -154,7 +154,7 @@ $itemQuit          = $menu.Items.Add("Quit");             $itemQuit.Add_Click({ 
 
 $script:Notify = New-Object System.Windows.Forms.NotifyIcon
 $script:Notify.Icon = $script:Icon
-$script:Notify.Text = "Syslog Collector"
+$script:Notify.Text = "Just Syslog"
 $script:Notify.ContextMenuStrip = $menu
 $script:Notify.Add_MouseDoubleClick({ Open-Viewer })
 $script:Notify.Visible = $true
@@ -162,11 +162,11 @@ $script:Notify.Visible = $true
 function Update-Status {
     $st = Get-Status
     if ($st.running) {
-        $script:Notify.Text = "Syslog Collector: Running ($($st.messages) msgs)"
+        $script:Notify.Text = "Just Syslog: Running ($($st.messages) msgs)"
         $script:ItemHeader.Text = "Running - $($st.messages) messages"
         $script:ItemStart.Enabled = $false; $script:ItemStop.Enabled = $true; $script:ItemViewer.Enabled = $true
     } else {
-        $script:Notify.Text = "Syslog Collector: Stopped"
+        $script:Notify.Text = "Just Syslog: Stopped"
         $script:ItemHeader.Text = "Stopped"
         $script:ItemStart.Enabled = $true; $script:ItemStop.Enabled = $false; $script:ItemViewer.Enabled = $false
     }

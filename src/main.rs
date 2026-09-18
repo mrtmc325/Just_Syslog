@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tristan Conner <tristan@conner.house>
 // SPDX-License-Identifier: MIT
 //
-// Syslog Collector — a lean Windows syslog (UDP/514) receiver with a local web
+// Just Syslog — a lean Windows syslog (UDP/514) receiver with a local web
 // viewer, packaged as a Windows service. `run` works on any OS for testing.
 
 mod config;
@@ -34,7 +34,7 @@ fn main() {
         "run" => {
             let cfg = cfg_with_overrides(&args);
             eprintln!(
-                "Syslog Collector {VERSION}\n  UDP  : 0.0.0.0:{}\n  UI   : http://127.0.0.1:{}/\n  Logs : {}\nCtrl+C to stop.",
+                "Just Syslog {VERSION}\n  UDP  : 0.0.0.0:{}\n  UI   : http://127.0.0.1:{}/\n  Logs : {}\nCtrl+C to stop.",
                 cfg.udp_port, cfg.ui_port, cfg.log_dir.display()
             );
             let running = Arc::new(AtomicBool::new(true));
@@ -78,7 +78,7 @@ fn main() {
 
 fn print_usage() {
     println!(
-        "Syslog Collector {VERSION}\n\n\
+        "Just Syslog {VERSION}\n\n\
          USAGE: syslogd <command> [options]\n\n\
          COMMANDS:\n\
          \x20 run                 Run in the foreground (any OS; for testing)\n\

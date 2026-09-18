@@ -20,7 +20,7 @@ use windows_service::service_manager::{ServiceManager, ServiceManagerAccess};
 use crate::config::{self, Config};
 
 const SERVICE_NAME: &str = "SyslogCollector";
-const DISPLAY_NAME: &str = "Syslog Collector";
+const DISPLAY_NAME: &str = "Just Syslog";
 const DESCRIPTION: &str =
     "Collects syslog (UDP/514) from network hosts into local log files and serves a local web viewer.";
 
@@ -143,7 +143,7 @@ pub fn uninstall() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn firewall_rule_name(port: u16) -> String {
-    format!("Syslog Collector UDP {port}")
+    format!("Just Syslog UDP {port}")
 }
 
 fn open_firewall(port: u16) -> std::io::Result<()> {

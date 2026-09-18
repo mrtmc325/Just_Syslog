@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tristan Conner <tristan@conner.house>
 // SPDX-License-Identifier: MIT
 //
-// Menu bar controller for the Syslog Collector service (macOS). Reads live
+// Menu bar controller for the Just Syslog service (macOS). Reads live
 // status from the collector's loopback HTTP API (no privilege needed) and
 // controls the root launchd daemon via `launchctl` behind a macOS admin prompt.
 // AppKit + Foundation only — no third-party dependencies.
@@ -48,7 +48,7 @@ struct Config {
     }
 
     func serialize() -> String {
-        var out = "# Syslog Collector configuration (macOS / Linux)\n"
+        var out = "# Just Syslog configuration (macOS / Linux)\n"
         for def in FIELD_DEFS {
             out += "\(def.key)=\(values[def.key] ?? "")\n"
         }
@@ -94,7 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ note: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let img = NSImage(systemSymbolName: "dot.radiowaves.left.and.right",
-                          accessibilityDescription: "Syslog Collector")
+                          accessibilityDescription: "Just Syslog")
         img?.isTemplate = true
         statusItem.button?.image = img
 
@@ -229,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
                          styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        w.title = "Syslog Collector Configuration"
+        w.title = "Just Syslog Configuration"
         w.isReleasedWhenClosed = false
         w.contentView = root
         win = w

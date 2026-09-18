@@ -13,7 +13,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall">
 
-  <Package Name="Syslog Collector"
+  <Package Name="Just Syslog"
            Manufacturer="Tristan Conner"
            Version="1.0.2.0"
            UpgradeCode="4146CA9C-75B3-4F7A-91DE-C0483160F66E"
@@ -24,7 +24,7 @@
          has a new ProductCode but the same version) replaces the existing
          install instead of adding a second Programs-and-Features entry. -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
-                  DowngradeErrorMessage="A newer version of Syslog Collector is already installed." />
+                  DowngradeErrorMessage="A newer version of Just Syslog is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Log directory: default here, override at install time with:
@@ -52,7 +52,7 @@
 
         <ServiceInstall Id="SvcInstall"
                         Name="SyslogCollector"
-                        DisplayName="Syslog Collector"
+                        DisplayName="Just Syslog"
                         Description="Collects syslog (UDP/514) from network hosts into local log files and serves a local web viewer."
                         Type="ownProcess"
                         Start="auto"
@@ -70,8 +70,8 @@
 
         <!-- Inbound UDP/514 allowed on all profiles; removed on uninstall. -->
         <fw:FirewallException Id="Syslog514"
-                              Name="Syslog Collector UDP 514"
-                              Description="Inbound syslog for Syslog Collector"
+                              Name="Just Syslog UDP 514"
+                              Description="Inbound syslog for Just Syslog"
                               Port="514"
                               Protocol="udp"
                               Scope="any" />
@@ -109,18 +109,18 @@
 
       <!-- Start Menu + Desktop shortcuts to the tray controller. -->
       <Shortcut Id="StartMenuTray" Directory="ProgramMenuFolder"
-                Name="Syslog Collector" Description="Open the Syslog Collector tray controller"
+                Name="Just Syslog" Description="Open the Just Syslog tray controller"
                 Target="[System64Folder]wscript.exe"
                 Arguments="&quot;[#SyslogTrayVbs]&quot;"
                 WorkingDirectory="TRAYFOLDER" Icon="SyslogAppIcon" />
       <Shortcut Id="DesktopTray" Directory="DesktopFolder"
-                Name="Syslog Collector" Description="Open the Syslog Collector tray controller"
+                Name="Just Syslog" Description="Open the Just Syslog tray controller"
                 Target="[System64Folder]wscript.exe"
                 Arguments="&quot;[#SyslogTrayVbs]&quot;"
                 WorkingDirectory="TRAYFOLDER" Icon="SyslogAppIcon" />
     </Component>
 
-    <Feature Id="Main" Title="Syslog Collector" Level="1">
+    <Feature Id="Main" Title="Just Syslog" Level="1">
       <ComponentGroupRef Id="ProgramFiles" />
       <ComponentRef Id="Config" />
       <ComponentRef Id="Tray" />

@@ -1,4 +1,4 @@
-# Syslog Collector configuration (macOS / Linux)
+# Just Syslog configuration (macOS / Linux)
 # Edit, then restart the service:
 #   Linux:  sudo systemctl restart syslog-collector
 #   macOS:  sudo launchctl kickstart -k system/house.conner.syslog-collector

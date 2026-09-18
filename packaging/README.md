@@ -32,7 +32,7 @@ launchctl bootout "gui/$(id -u)" /Library/LaunchAgents/house.conner.syslog-colle
 sudo rm /Library/LaunchDaemons/house.conner.syslog-collector.plist \
         /Library/LaunchAgents/house.conner.syslog-collector.menubar.plist \
         /usr/local/bin/syslog-collector
-sudo rm -rf "/Applications/Syslog Collector.app"
+sudo rm -rf "/Applications/Just Syslog.app"
 # (logs under /var/log/syslog-collector are left in place)
 ```
 
@@ -41,7 +41,7 @@ The daemon runs as **root** (needed to bind port 514), starts at boot
 
 ### Menu bar app
 
-The pkg also installs **`/Applications/Syslog Collector.app`** — a menu bar
+The pkg also installs **`/Applications/Just Syslog.app`** — a menu bar
 controller (AppKit, no dependencies). It **starts automatically** right after
 install and at every login (via a LaunchAgent), so the icon appears without
 opening it manually. Its menu bar icon shows service status (polled from the

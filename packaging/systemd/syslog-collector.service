@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Tristan Conner <tristan@conner.house>
 # SPDX-License-Identifier: MIT
 [Unit]
-Description=Syslog Collector - UDP/514 receiver with local web viewer
+Description=Just Syslog - UDP/514 receiver with local web viewer
 After=network-online.target
 Wants=network-online.target
 

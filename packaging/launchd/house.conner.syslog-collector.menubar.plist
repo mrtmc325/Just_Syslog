@@ -8,7 +8,7 @@
     <string>house.conner.syslog-collector.menubar</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Applications/Syslog Collector.app/Contents/MacOS/SyslogCollector</string>
+        <string>/Applications/Just Syslog.app/Contents/MacOS/SyslogCollector</string>
     </array>
     <!-- Start the menu bar app at each user login. No KeepAlive, so the app's
          own Quit stays quit until the next login. -->

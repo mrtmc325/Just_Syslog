@@ -6,6 +6,12 @@ All notable changes are documented here. Format loosely follows
 
 ## [1.0.2] — 2026-09-17
 
+### Changed
+- Renamed the product to **Just Syslog** across the UI, installers, menu bar /
+  tray apps, shortcuts, and service display name. Underlying identifiers are
+  unchanged (service name `SyslogCollector` / `syslog-collector`, install paths,
+  bundle IDs), so upgrades keep working.
+
 ### Added
 - Web viewer: **severity summary bar** — per-level counts, click a chip to filter.
 - Web viewer: **source quick-filter** — filter by sender IP (with counts).
