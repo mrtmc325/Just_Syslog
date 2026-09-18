@@ -48,6 +48,10 @@ All notable changes are documented here. Format loosely follows
   (`rust:1.94-bookworm`) and a specific `nfpm` version, and verifies the nfpm
   download against a known SHA-256 before running it. `nfpm` package license
   metadata corrected to MIT.
+- Added CI security gates (GitHub Actions): build + test on every push/PR, a
+  dependency-advisory scan (`cargo audit`, also run weekly to catch newly
+  disclosed advisories), and a secret scan (`gitleaks`). Advisory scan is clean
+  as of 2026-09-18 (7 dependencies, no advisories).
 
 ### Fixed
 - Installers now stop a running instance **before** upgrading, so an upgrade

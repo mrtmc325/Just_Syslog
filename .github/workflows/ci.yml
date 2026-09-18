@@ -1,0 +1,51 @@
+# Copyright (c) 2026 Tristan Conner <tristan@conner.house>
+# SPDX-License-Identifier: MIT
+#
+# CI security + quality gates: build/test, dependency advisories, and a secret
+# scan. Runs on every push/PR and weekly (to catch newly disclosed advisories
+# against unchanged code). Action versions are tag-pinned; pin by commit SHA for
+# stricter supply-chain hygiene.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: cargo test (locked)
+        run: cargo test --locked --all-targets
+
+  audit:
+    name: Dependency advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      # Fails the build on any advisory or warning (e.g. unmaintained crate),
+      # against the committed Cargo.lock.
+      - name: cargo audit
+        run: cargo audit --deny warnings
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the scan covers all commits
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
