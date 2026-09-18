@@ -15,6 +15,11 @@ All notable changes are documented here. Format loosely follows
   **Copy** button on the message-detail view.
 - Web viewer: **dark theme** — follows the OS (`prefers-color-scheme`) with a
   session-only toggle (no preference is stored client-side).
+- Web viewer: **filter-match highlighting** in the message column; a
+  **"collector not responding"** banner when the local API is unreachable; a
+  **flash** on rows that arrive during auto-refresh; press **`/`** to jump to the
+  filter box; and a **2s / 5s / 10s auto-refresh interval** selector. All
+  client-side only — nothing is stored in the browser.
 
 ## [1.0.1] — 2026-09-16
 

@@ -79,6 +79,12 @@
   .ver { font-size:11px; font-weight:500; color:#9aa4b2; }
   .tablecap { font-size:12px; color:var(--muted); padding:0 0 8px; }
   .copybtn { font-size:11px; padding:1px 8px; margin-left:6px; }
+  mark { background:rgba(250,204,21,.35); color:inherit; border-radius:2px; padding:0 1px; }
+  .offline { color:#fca5a5; font-size:12px; font-weight:600; }
+  .offline .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:#ef4444; margin-right:5px; vertical-align:middle; }
+  @keyframes flashrow { from { background:rgba(59,130,246,.22); } to { background:transparent; } }
+  tbody tr.flash td { animation: flashrow 1.6s ease-out; }
   /* Detail modal */
   .modal { position:fixed; inset:0; background:rgba(15,23,42,.5);
     display:none; align-items:flex-start; justify-content:center; padding:40px 16px; }
@@ -99,6 +105,7 @@
 <body>
 <header>
   <h1>Syslog Collector <span id="ver" class="ver"></span></h1>
+  <span id="offline" class="offline" hidden><span class="dot"></span>collector not responding</span>
   <span class="stat">Messages (file): <b id="st-msgs">–</b></span>
   <span class="stat">Last message: <b id="st-last">–</b></span>
   <span class="stat">Files: <b id="st-files">–</b></span>
@@ -131,6 +138,9 @@
   </label>
   <input id="filter" type="text" placeholder="Filter host / app / text…">
   <label><input id="auto" type="checkbox"> auto-refresh</label>
+  <select id="interval" title="Auto-refresh interval">
+    <option value="2000">2s</option><option value="5000" selected>5s</option><option value="10000">10s</option>
+  </select>
   <button id="refresh">Refresh</button>
   <button id="export" title="Download the filtered rows as CSV">Export CSV</button>
   <button id="cleanup" class="warn" title="Delete old / oversized log files now">Run cleanup</button>
@@ -181,10 +191,12 @@ async function loadFiles(){
 }
 
 async function loadStats(){
+  let ok = true;
   const [s,c] = await Promise.all([
-    fetch("/api/stats").then(r=>r.json()).catch(()=>({})),
+    fetch("/api/stats").then(r=>r.json()).catch(()=>{ ok=false; return {}; }),
     fetch("/api/config").then(r=>r.json()).catch(()=>({})),
   ]);
+  $("offline").hidden = ok;   // show the banner only while a stats fetch is failing
   $("st-msgs").textContent = s.total_messages ?? "0";
   $("st-files").textContent = s.file_count ?? "0";
   $("st-size").textContent = fmtBytes(s.total_bytes ?? 0);
@@ -208,11 +220,18 @@ function ago(iso){
 function renderLastReceived(){ $("st-last").textContent = lastReceivedIso ? ago(lastReceivedIso) : "never"; }
 setInterval(renderLastReceived, 1000);  // keep the "N s ago" ticking (runtime only, not stored)
 
+let seenKeys = new Set(), flashKeys = new Set(), firstLoad = true;
+function keyOf(m){ return m.received+"|"+m.source_ip+"|"+m.raw; }
+
 async function loadMessages(){
   const file = $("file").value;
   const limit = $("limit").value;
   const q = "/api/messages?limit="+encodeURIComponent(limit)+(file?"&file="+encodeURIComponent(file):"");
   CURRENT = await fetch(q).then(r=>r.json()).catch(()=>[]);
+  // Flag rows new since the last load so render() flashes them once (skip first load).
+  const cur = new Set(); flashKeys = new Set();
+  for (const m of CURRENT){ const k=keyOf(m); cur.add(k); if(!firstLoad && !seenKeys.has(k)) flashKeys.add(k); }
+  seenKeys = cur; firstLoad = false;
   populateSources();
   render();
 }
@@ -234,9 +253,10 @@ function render(){
     if (sev !== "" && String(m.severity) !== sev) continue;
     if (source !== "" && m.source_ip !== source) continue;
     if (!matchesText(m, term)) continue;
-    rows.appendChild(rowEl(m, i));
+    rows.appendChild(rowEl(m, term));
     shown++;
   }
+  flashKeys = new Set();   // consume: only the render right after a load flashes new rows
   $("empty").style.display = shown ? "none" : "block";
   $("count").textContent = CURRENT.length
     ? (shown === CURRENT.length ? shown+" messages" : "Showing "+shown+" of "+CURRENT.length)
@@ -319,8 +339,26 @@ function exportCsv(){
 
 function td(text, cls){ const d=document.createElement("td"); if(cls)d.className=cls; d.textContent=text??""; return d; }
 
-function rowEl(m, idx){
+// Message cell with case-insensitive highlight of the filter term. Builds text
+// nodes + <mark> elements (never innerHTML) so message content stays inert.
+function msgCell(text, term){
+  const d=document.createElement("td"); d.className="msg";
+  const s = text ?? "";
+  if(!term){ d.textContent=s; return d; }
+  const low=s.toLowerCase(); let i=0, idx;
+  while((idx=low.indexOf(term,i)) !== -1){
+    if(idx>i) d.appendChild(document.createTextNode(s.slice(i,idx)));
+    const mk=document.createElement("mark"); mk.textContent=s.slice(idx,idx+term.length);
+    d.appendChild(mk);
+    i=idx+term.length;
+  }
+  if(i<s.length) d.appendChild(document.createTextNode(s.slice(i)));
+  return d;
+}
+
+function rowEl(m, term){
   const tr = document.createElement("tr");
+  if(flashKeys.has(keyOf(m))) tr.className="flash";
   tr.appendChild(td(m.received));
   tr.appendChild(td(m.source_ip));
   tr.appendChild(td(m.hostname || "—"));
@@ -332,7 +370,7 @@ function rowEl(m, idx){
   sd.appendChild(badge); tr.appendChild(sd);
   tr.appendChild(td(m.facility_name));
   tr.appendChild(td(m.app || "—"));
-  tr.appendChild(td(m.message, "msg"));
+  tr.appendChild(msgCell(m.message, term));
   tr.addEventListener("click", ()=>openDetail(m));
   return tr;
 }
@@ -381,7 +419,13 @@ $("copyraw").addEventListener("click", ()=>{
 });
 $("close").addEventListener("click", ()=>$("modal").classList.remove("open"));
 $("modal").addEventListener("click", e=>{ if(e.target===$("modal")) $("modal").classList.remove("open"); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") $("modal").classList.remove("open"); });
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") $("modal").classList.remove("open");
+  // "/" jumps to the filter box, unless you're already typing in a field.
+  if(e.key==="/" && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)){
+    e.preventDefault(); $("filter").focus();
+  }
+});
 $("cleanup").addEventListener("click", async ()=>{
   if(!confirm("Delete log files older than the retention period, and trim oldest files if over the size cap?")) return;
   const r = await fetch("/api/cleanup",{method:"POST"}).then(r=>r.json()).catch(()=>({}));
@@ -394,10 +438,11 @@ function syncAutoRefresh(){
   clearInterval(timer); timer=null;
   if($("auto").checked){
     loadStats(); loadMessages();            // fire now, don't wait for the first interval
-    timer=setInterval(()=>{ loadStats(); loadMessages(); }, 5000);
+    timer=setInterval(()=>{ loadStats(); loadMessages(); }, parseInt($("interval").value,10)||5000);
   }
 }
 $("auto").addEventListener("change", syncAutoRefresh);
+$("interval").addEventListener("change", syncAutoRefresh);   // re-arm at the new interval
 
 // Theme: follows the OS by default; this toggle overrides for the session only
 // (data-theme on <html>) — nothing is stored, so a full reload reverts to the OS.
