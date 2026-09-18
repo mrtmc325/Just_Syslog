@@ -14,10 +14,15 @@ publish = false
 name = "syslogd"
 path = "src/main.rs"
 
-# Only external dependency. Windows-only; the portable core builds with std alone
-# (so parser/HTTP/storage logic is testable on any OS).
+# External deps are platform-gated and exact-pinned. The portable core (parser/
+# HTTP/storage) builds with std alone, so its logic is testable on any OS.
 [target.'cfg(windows)'.dependencies]
 windows-service = "=0.8.1"
+
+# libc: drop root to a dedicated account after binding UDP/514 on Unix (used by
+# the macOS root daemon; a no-op under systemd, which already runs as a user).
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.189"
 
 [profile.release]
 lto = true

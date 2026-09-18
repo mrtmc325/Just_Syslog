@@ -31,6 +31,13 @@ All notable changes are documented here. Format loosely follows
   users can't read captured syslog; the pkg `preinstall` process-kill patterns are
   anchored to the start of the command line so they can't match an unrelated
   process.
+- **macOS privilege drop:** the daemon now binds UDP/514 as root and then drops to
+  a dedicated `_syslogcollector` account (created by the installer), so the
+  network-facing parser no longer runs as root. It self-gates (stays root, still
+  collecting, if the account/log-dir aren't set up) and fails closed if a drop
+  leaves root regainable. Adds one dependency, `libc = "=0.2.189"` (Unix only;
+  advisory-clean 2026-09-18); SBOM regenerated. Linux already runs as a dedicated
+  user via systemd, so it's unaffected.
 - **Linux:** the systemd unit adds substantial sandboxing (`ProtectSystem=full`,
   `SystemCallFilter=@system-service`, `RestrictAddressFamilies`, `PrivateDevices`,
   `MemoryDenyWriteExecute`, `UMask=0027`, and more), keeping a custom `log_dir`

@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "serialNumber": "urn:uuid:813f255c-a772-4532-a5f1-bb47a081e8e2",
-  "version": 1,
+  "version": 2,
   "metadata": {
-    "timestamp": "2026-09-15T15:14:31Z",
+    "timestamp": "2026-09-18T18:20:00Z",
     "tools": [
       { "vendor": "Rust", "name": "cargo", "version": "1.94.1" }
     ],
@@ -16,16 +16,28 @@
       "bom-ref": "pkg:cargo/syslog-collector@1.0.2",
       "name": "syslog-collector",
       "version": "1.0.2",
-      "description": "Lean Windows syslog (UDP/514) collector with a local web viewer.",
+      "description": "Lean cross-platform syslog (UDP/514) collector with a local web viewer.",
       "purl": "pkg:cargo/syslog-collector@1.0.2",
       "licenses": [ { "expression": "MIT" } ]
     },
     "properties": [
-      { "name": "rust:toolchain", "value": "rustc 1.94.1 (target: x86_64-pc-windows-msvc, i686-pc-windows-msvc)" },
-      { "name": "note", "value": "Windows crates below are compiled only for cfg(windows) targets; non-Windows builds have zero external dependencies." }
+      { "name": "rust:toolchain", "value": "rustc 1.94.1" },
+      { "name": "note", "value": "External crates are platform-gated: the windows-* crates compile only for cfg(windows), libc only for cfg(unix). A build for any single target pulls in only its own gated deps." }
     ]
   },
   "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:cargo/libc@0.2.189",
+      "name": "libc",
+      "version": "0.2.189",
+      "scope": "required",
+      "description": "Raw FFI bindings to platform system libraries; used on Unix to drop root after binding UDP/514.",
+      "purl": "pkg:cargo/libc@0.2.189",
+      "supplier": { "name": "The Rust Project Developers", "url": ["https://github.com/rust-lang/libc"] },
+      "licenses": [ { "expression": "MIT OR Apache-2.0" } ],
+      "hashes": [ { "alg": "SHA-256", "content": "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2" } ]
+    },
     {
       "type": "library",
       "bom-ref": "pkg:cargo/windows-service@0.8.1",
@@ -70,6 +82,7 @@
       "scope": "required",
       "description": "Typed bitflag macro (transitive of windows-service).",
       "purl": "pkg:cargo/bitflags@2.13.2",
+      "supplier": { "name": "The Rust Project Developers", "url": ["https://github.com/bitflags/bitflags"] },
       "licenses": [ { "expression": "MIT OR Apache-2.0" } ],
       "hashes": [ { "alg": "SHA-256", "content": "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06" } ]
     },
@@ -81,6 +94,7 @@
       "scope": "required",
       "description": "UTF-16/wide string handling for Win32 APIs (transitive of windows-service).",
       "purl": "pkg:cargo/widestring@1.2.1",
+      "supplier": { "name": "Kathryn Long", "url": ["https://github.com/starkat99/widestring-rs"] },
       "licenses": [ { "expression": "MIT OR Apache-2.0" } ],
       "hashes": [ { "alg": "SHA-256", "content": "72069c3113ab32ab29e5584db3c6ec55d416895e60715417b5b883a357c3e471" } ]
     }
@@ -88,7 +102,10 @@
   "dependencies": [
     {
       "ref": "pkg:cargo/syslog-collector@1.0.2",
-      "dependsOn": [ "pkg:cargo/windows-service@0.8.1" ]
+      "dependsOn": [
+        "pkg:cargo/windows-service@0.8.1",
+        "pkg:cargo/libc@0.2.189"
+      ]
     },
     {
       "ref": "pkg:cargo/windows-service@0.8.1",
@@ -104,6 +121,7 @@
     },
     { "ref": "pkg:cargo/windows-link@0.2.1", "dependsOn": [] },
     { "ref": "pkg:cargo/bitflags@2.13.2", "dependsOn": [] },
-    { "ref": "pkg:cargo/widestring@1.2.1", "dependsOn": [] }
+    { "ref": "pkg:cargo/widestring@1.2.1", "dependsOn": [] },
+    { "ref": "pkg:cargo/libc@0.2.189", "dependsOn": [] }
   ]
 }
