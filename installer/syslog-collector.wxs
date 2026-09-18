@@ -22,8 +22,13 @@
 
     <!-- AllowSameVersionUpgrades: reinstalling the same version (a rebuilt MSI
          has a new ProductCode but the same version) replaces the existing
-         install instead of adding a second Programs-and-Features entry. -->
-    <MajorUpgrade AllowSameVersionUpgrades="yes"
+         install instead of adding a second Programs-and-Features entry.
+         Schedule=afterInstallInitialize moves the removal of the old version
+         into the elevated execute phase, so StopSyslogInstance (below) can stop
+         the running service + tray before the old files are removed and the new
+         ones are laid down. -->
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="A newer version of Just Syslog is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
@@ -66,7 +71,7 @@
                         Start="install"
                         Stop="both"
                         Remove="uninstall"
-                        Wait="no" />
+                        Wait="yes" />
 
         <!-- Inbound UDP/514 allowed on all profiles; removed on uninstall. -->
         <fw:FirewallException Id="Syslog514"
@@ -126,6 +131,22 @@
       <ComponentRef Id="Tray" />
     </Feature>
 
+    <!-- On upgrade/reinstall, stop the running instance BEFORE the old payload
+         is removed and the new one is laid down: Stop-Service waits for the
+         service to actually stop (frees UDP/514 + syslogd.exe), then the tray
+         controller process is killed by command-line match (frees the tray
+         files + clears the stale icon). Deferred + no impersonation => runs
+         elevated as SYSTEM; best-effort (Return=ignore) so it never blocks. -->
+    <!-- Command is intentionally brace-free: MSI Formatted fields treat {} and
+         [] as special, so the tray is matched with chained Where-Object and
+         killed with Invoke-CimMethod Terminate (no script blocks, no $_). -->
+    <CustomAction Id="StopSyslogInstance"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;Stop-Service -Name SyslogCollector -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process | Where-Object Name -eq 'powershell.exe' | Where-Object CommandLine -like '*SyslogTray.ps1*' | Invoke-CimMethod -MethodName Terminate -ErrorAction SilentlyContinue&quot;"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
     <!-- Start the tray now (in the installing user's session) on a fresh
          install, so the icon appears without waiting for the next login. -->
     <CustomAction Id="LaunchTray"
@@ -135,6 +156,8 @@
                   Impersonate="yes"
                   Return="asyncNoWait" />
     <InstallExecuteSequence>
+      <Custom Action="StopSyslogInstance" Before="RemoveExistingProducts"
+              Condition="WIX_UPGRADE_DETECTED" />
       <Custom Action="LaunchTray" After="InstallFinalize" Condition="NOT Installed" />
     </InstallExecuteSequence>
 

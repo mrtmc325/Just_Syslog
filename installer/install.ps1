@@ -44,6 +44,11 @@ if (Get-Service -Name "SyslogCollector" -ErrorAction SilentlyContinue) {
     & $destExe uninstall 2>$null
     Start-Sleep -Seconds 2
 }
+# Stop a running tray controller too, so its files aren't locked during copy
+# (parity with the macOS installer and uninstall.ps1).
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like "*SyslogTray.ps1*" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Copy-Item -Path $BinaryPath -Destination $destExe -Force
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
