@@ -26,7 +26,7 @@ the single `.msi`:
 .\installer\build-msi.ps1
 ```
 ```powershell
-msiexec /i SyslogCollector-1.0.2-x64.msi LOGDIR="D:\Logs"
+msiexec /i JustSyslog-1.0.2-x64.msi LOGDIR="D:\Logs"
 ```
 
 Installs the service (auto-start), opens **UDP/514** in the firewall, drops a
@@ -48,9 +48,9 @@ and exits. Status shows in the tooltip; service actions prompt for UAC.
 ./packaging/linux/build-in-docker.sh    # Linux -> .deb + .rpm (from any Docker host)
 ```
 ```bash
-sudo installer -pkg SyslogCollector-1.0.2-macos.pkg -target /
-sudo apt install ./syslog-collector_1.0.2_amd64.deb            # Debian/Ubuntu
-sudo dnf install ./syslog-collector-1.0.2-1.x86_64.rpm         # RHEL/Fedora
+sudo installer -pkg JustSyslog-1.0.2-macos.pkg -target /
+sudo apt install ./just-syslog_1.0.2_amd64.deb            # Debian/Ubuntu
+sudo dnf install ./just-syslog-1.0.2-1.x86_64.rpm         # RHEL/Fedora
 ```
 
 macOS gets the same controller as the Windows tray, in the **menu bar**. Config at

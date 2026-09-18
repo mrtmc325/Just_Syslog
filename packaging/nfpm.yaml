@@ -3,11 +3,19 @@
 #
 # One config -> .deb and .rpm via nfpm (https://nfpm.goreleaser.com).
 # @@ARCH@@ and @@BIN@@ are rendered by packaging/linux/build-linux-packages.sh (sed).
-name: syslog-collector
+name: just-syslog
 arch: "@@ARCH@@"
 platform: linux
 version: "1.0.2"
 maintainer: Tristan Conner <tristan@conner.house>
+# Cleanly supersede the pre-rebrand package (maps to deb Replaces/Conflicts and
+# rpm Obsoletes/Conflicts) so an upgrade removes the old syslog-collector build.
+replaces:
+  - syslog-collector
+conflicts:
+  - syslog-collector
+provides:
+  - syslog-collector
 description: |
   Lean syslog server. Receives UDP/514 from network hosts, parses RFC 3164 /
   RFC 5424 (and anything else, best-effort), stores newline-delimited JSON

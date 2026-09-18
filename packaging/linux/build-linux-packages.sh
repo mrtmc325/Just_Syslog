@@ -34,4 +34,4 @@ nfpm package -f "$RENDERED" -p rpm
 rm -f "$RENDERED"
 
 echo "Built in $ROOT:"
-ls -1 syslog-collector*.deb syslog-collector*.rpm 2>/dev/null
+ls -1 just-syslog*.deb just-syslog*.rpm 2>/dev/null

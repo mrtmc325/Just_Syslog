@@ -35,4 +35,4 @@ docker run --rm --platform "$PLATFORM" -e ARCH="$ARCH" \
 
 echo ""
 echo "Built in $ROOT:"
-ls -1 "$ROOT"/syslog-collector*.deb "$ROOT"/syslog-collector*.rpm 2>/dev/null
+ls -1 "$ROOT"/just-syslog*.deb "$ROOT"/just-syslog*.rpm 2>/dev/null

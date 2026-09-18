@@ -28,7 +28,7 @@
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Log directory: default here, override at install time with:
-         msiexec /i SyslogCollector-1.0.2-x64.msi LOGDIR="D:\SyslogLogs" -->
+         msiexec /i JustSyslog-1.0.2-x64.msi LOGDIR="D:\SyslogLogs" -->
     <Property Id="LOGDIR" Value="C:\SyslogCollector\logs" />
 
     <StandardDirectory Id="ProgramFiles64Folder">

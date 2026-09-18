@@ -45,7 +45,7 @@ pkgbuild --analyze --root "$STAGE" "$COMPONENT" >/dev/null
 /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$COMPONENT" 2>/dev/null \
     || plutil -replace 0.BundleIsRelocatable -bool false "$COMPONENT"
 
-OUT="$ROOT/SyslogCollector-${VERSION}-macos.pkg"
+OUT="$ROOT/JustSyslog-${VERSION}-macos.pkg"
 pkgbuild \
     --root "$STAGE" \
     --component-plist "$COMPONENT" \

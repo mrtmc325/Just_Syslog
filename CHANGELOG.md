@@ -8,9 +8,12 @@ All notable changes are documented here. Format loosely follows
 
 ### Changed
 - Renamed the product to **Just Syslog** across the UI, installers, menu bar /
-  tray apps, shortcuts, and service display name. Underlying identifiers are
-  unchanged (service name `SyslogCollector` / `syslog-collector`, install paths,
-  bundle IDs), so upgrades keep working.
+  tray apps, shortcuts, service display name, and the release artifacts
+  (`JustSyslog-*.msi` / `.pkg`, `just-syslog` `.deb` / `.rpm`). The Linux package
+  declares Replaces/Conflicts/Provides on `syslog-collector` so it supersedes the
+  old package on upgrade. Runtime identifiers are unchanged — Windows service
+  `SyslogCollector`, systemd unit `syslog-collector.service`, install paths, and
+  bundle IDs — so existing services and configs keep working.
 
 ### Added
 - Web viewer: **severity summary bar** — per-level counts, click a chip to filter.
